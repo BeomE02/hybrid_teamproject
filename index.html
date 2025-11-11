@@ -1,0 +1,2030 @@
+<!DOCTYPE HTML>
+<html lang="ko">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes"/>
+    <meta name="description" content="토스 - 금융의 모든 것, 쉽고 간편하게"/>
+    <title>토스 | 새로운 금융의 시작</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+<style>
+:root {
+  --toss-blue: #0064FF;
+  --toss-blue-dark: #0051CC;
+  --toss-blue-light: #E8F3FF;
+  --white: #FFFFFF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F2F4F6;
+  --gray-200: #E5E8EB;
+  --gray-300: #D1D6DB;
+  --gray-400: #B0B8C1;
+  --gray-500: #8B95A1;
+  --gray-600: #6B7684;
+  --gray-700: #4E5968;
+  --gray-800: #333D4B;
+  --gray-900: #191F28;
+  --black: #000000;
+  --success: #00C896;
+  --warning: #FFB800;
+  --danger: #FF5757;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  background: white;
+  color: var(--gray-900);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* 헤더 스타일 */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.header-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo-placeholder {
+  width: 80px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-placeholder img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.nav-menu {
+  display: flex;
+  gap: 32px;
+  list-style: none;
+}
+
+.nav-menu li a {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--gray-700);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.nav-menu li a:hover {
+  color: var(--black);
+}
+
+/* 모바일 메뉴 */
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--gray-700);
+  cursor: pointer;
+  padding: 8px;
+}
+
+@media (max-width: 768px) {
+  .nav-menu {
+    display: none;
+  }
+  
+  .mobile-menu-toggle {
+    display: block;
+  }
+}
+
+/* 히어로 섹션 */
+.hero-section {
+  padding: 160px 24px 120px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(180deg, #FAFBFC 0%, #FFFFFF 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-content {
+  max-width: 1140px;
+  width: 100%;
+  text-align: center;
+}
+
+.hero-title {
+  font-size: 56px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -2px;
+  color: var(--gray-900);
+  margin-bottom: 24px;
+}
+
+.hero-subtitle {
+  font-size: 20px;
+  color: var(--gray-600);
+  line-height: 1.5;
+  letter-spacing: -0.3px;
+  margin-bottom: 48px;
+}
+
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 32px;
+  background: var(--toss-blue);
+  color: white;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  outline: none;
+}
+
+.hero-cta:hover {
+  background: var(--toss-blue-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 100, 255, 0.25);
+}
+
+/* 계산기 섹션 스타일 */
+.calculator-section {
+  background: linear-gradient(180deg, #F8F9FA 0%, #FFFFFF 100%);
+  padding: 100px 24px;
+}
+
+.calculator-section-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+.calculator-header {
+  text-align: center;
+  margin-bottom: 60px;
+}
+
+.calculator-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--toss-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.calculator-title {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -1.5px;
+  color: var(--gray-900);
+  margin-bottom: 20px;
+}
+
+.calculator-desc {
+  font-size: 18px;
+  color: var(--gray-600);
+  line-height: 1.6;
+}
+
+/* 계산기 탭 스타일 */
+.calculator-tabs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 40px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.calculator-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.calculator-tabs::-webkit-scrollbar-thumb {
+  background: var(--gray-300);
+  border-radius: 2px;
+}
+
+.calculator-tab {
+  flex-shrink: 0;
+  padding: 12px 24px;
+  background: white;
+  border: 2px solid var(--gray-200);
+  border-radius: 24px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.calculator-tab.active {
+  background: var(--toss-blue);
+  border-color: var(--toss-blue);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 100, 255, 0.2);
+}
+
+.calculator-tab:hover:not(.active) {
+  border-color: var(--toss-blue);
+  color: var(--toss-blue);
+}
+
+/* 계산기 컨테이너 */
+.calculator-container {
+  background: white;
+  border-radius: 24px;
+  padding: 40px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.calculator-content {
+  display: none;
+  animation: fadeIn 0.5s ease;
+}
+
+.calculator-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 입력 필드 공통 스타일 */
+.input-group {
+  margin-bottom: 24px;
+}
+
+.input-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-700);
+  margin-bottom: 8px;
+}
+
+.input-wrapper {
+  position: relative;
+}
+
+.input-field {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  border: 2px solid var(--gray-200);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--toss-blue);
+  box-shadow: 0 0 0 4px rgba(0, 100, 255, 0.1);
+}
+
+.input-addon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--gray-500);
+  font-weight: 600;
+}
+
+/* 셀렉트 박스 스타일 */
+.select-field {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  border: 2px solid var(--gray-200);
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 20px;
+  padding-right: 48px;
+}
+
+.select-field:focus {
+  outline: none;
+  border-color: var(--toss-blue);
+  box-shadow: 0 0 0 4px rgba(0, 100, 255, 0.1);
+}
+
+/* 버튼 스타일 */
+.calculate-btn {
+  width: 100%;
+  padding: 16px;
+  background: var(--toss-blue);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 32px;
+}
+
+.calculate-btn:hover {
+  background: var(--toss-blue-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 100, 255, 0.25);
+}
+
+.calculate-btn:active {
+  transform: translateY(0);
+}
+
+/* 결과 표시 영역 */
+.result-container {
+  margin-top: 32px;
+  padding: 24px;
+  background: var(--gray-50);
+  border-radius: 16px;
+  display: none;
+  animation: slideUp 0.5s ease;
+}
+
+.result-container.show {
+  display: block;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 16px;
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.result-item:last-child {
+  border-bottom: none;
+  padding-top: 16px;
+  margin-top: 8px;
+  border-top: 2px solid var(--gray-300);
+}
+
+.result-label {
+  font-size: 14px;
+  color: var(--gray-600);
+}
+
+.result-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--toss-blue);
+}
+
+.result-value.large {
+  font-size: 24px;
+}
+
+/* 그리드 레이아웃 */
+.input-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+/* 섹션 공통 스타일 */
+.section {
+  padding: 120px 24px;
+  position: relative;
+}
+
+.section-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 80px;
+}
+
+.section-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--toss-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -1.5px;
+  color: var(--gray-900);
+  margin-bottom: 20px;
+}
+
+.section-desc {
+  font-size: 18px;
+  color: var(--gray-600);
+  line-height: 1.6;
+  letter-spacing: -0.3px;
+}
+
+/* 소개 섹션 */
+.intro-section {
+  background: var(--gray-50);
+}
+
+.intro-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 32px;
+}
+
+.intro-card {
+  background: white;
+  border-radius: 24px;
+  padding: 48px 40px;
+  border: 1px solid var(--gray-100);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.intro-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--toss-blue) 0%, var(--toss-blue-dark) 100%);
+  transform: translateY(-100%);
+  transition: transform 0.3s ease;
+}
+
+.intro-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+}
+
+.intro-card:hover::before {
+  transform: translateY(0);
+}
+
+.intro-card-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, rgba(0, 100, 255, 0.1) 0%, rgba(0, 100, 255, 0.05) 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin-bottom: 24px;
+}
+
+.intro-card-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin-bottom: 16px;
+  letter-spacing: -0.5px;
+}
+
+.intro-card-content {
+  font-size: 16px;
+  color: var(--gray-600);
+  line-height: 1.8;
+}
+
+/* 푸터 */
+.footer {
+  background: var(--gray-900);
+  color: var(--gray-400);
+  padding: 80px 24px 40px;
+}
+
+.footer-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+.footer-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 48px;
+  margin-bottom: 48px;
+}
+
+.footer-brand {
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 16px;
+}
+
+.footer-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--gray-500);
+}
+
+.footer-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.footer-links {
+  list-style: none;
+}
+
+.footer-links li {
+  margin-bottom: 12px;
+}
+
+.footer-links a {
+  color: var(--gray-400);
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.2s ease;
+}
+
+.footer-links a:hover {
+  color: white;
+}
+
+.footer-bottom {
+  padding-top: 32px;
+  border-top: 1px solid var(--gray-800);
+  text-align: center;
+  font-size: 14px;
+}
+
+/* 툴팁 스타일 */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  margin-left: 8px;
+  cursor: help;
+}
+
+.tooltip-icon {
+  width: 18px;
+  height: 18px;
+  background: var(--gray-200);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--gray-600);
+  font-weight: 700;
+}
+
+.tooltip-content {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--gray-800);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  margin-bottom: 8px;
+  z-index: 1000;
+}
+
+.tooltip-content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--gray-800);
+}
+
+.tooltip:hover .tooltip-content {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 로딩 스피너 */
+.loading-spinner {
+  display: none;
+  width: 40px;
+  height: 40px;
+  margin: 20px auto;
+  border: 4px solid var(--gray-200);
+  border-top-color: var(--toss-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-spinner.show {
+  display: block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 토스트 메시지 */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--gray-800);
+  color: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  z-index: 2000;
+  min-width: 280px;
+  text-align: center;
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  visibility: visible;
+}
+
+.toast.success {
+  background: var(--success);
+}
+
+.toast.error {
+  background: var(--danger);
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 36px;
+  }
+  
+  .hero-subtitle {
+    font-size: 18px;
+  }
+  
+  .section-title,
+  .calculator-title {
+    font-size: 32px;
+  }
+  
+  .calculator-container {
+    padding: 24px 20px;
+  }
+  
+  .calculator-tabs {
+    gap: 8px;
+  }
+  
+  .calculator-tab {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+  
+  .input-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .footer-content {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+}
+
+/* 스크롤 애니메이션 */
+.scroll-element {
+  opacity: 0;
+  transform: translateY(60px);
+  transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.scroll-element.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 페이지 로딩 애니메이션 */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-title {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.hero-subtitle {
+  animation: fadeInUp 0.8s ease-out 0.1s backwards;
+}
+
+.hero-cta {
+  animation: fadeInUp 0.8s ease-out 0.2s backwards;
+}
+
+/* 숫자 입력 커스텀 */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* 체크박스 커스텀 */
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.checkbox-input {
+  width: 20px;
+  height: 20px;
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+.checkbox-label {
+  font-size: 14px;
+  color: var(--gray-700);
+  cursor: pointer;
+}
+
+/* 라디오 버튼 그룹 */
+.radio-group {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.radio-wrapper {
+  flex: 1;
+}
+
+.radio-label {
+  display: block;
+  padding: 12px;
+  background: white;
+  border: 2px solid var(--gray-200);
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.radio-input {
+  display: none;
+}
+
+.radio-input:checked + .radio-label {
+  background: var(--toss-blue);
+  border-color: var(--toss-blue);
+  color: white;
+}
+
+/* 프로그레스 바 */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--gray-200);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 24px 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--toss-blue) 0%, var(--toss-blue-dark) 100%);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* 차트 컨테이너 */
+.chart-container {
+  margin-top: 32px;
+  padding: 24px;
+  background: var(--gray-50);
+  border-radius: 16px;
+  min-height: 300px;
+  display: none;
+}
+
+.chart-container.show {
+  display: block;
+}
+
+/* 테이블 스타일 */
+.result-table {
+  width: 100%;
+  margin-top: 24px;
+  border-collapse: collapse;
+}
+
+.result-table th {
+  background: var(--gray-100);
+  padding: 12px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-700);
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.result-table td {
+  padding: 12px;
+  font-size: 14px;
+  color: var(--gray-800);
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.result-table tbody tr:hover {
+  background: var(--gray-50);
+}
+
+/* 공유 버튼 */
+.share-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.share-btn {
+  flex: 1;
+  padding: 12px;
+  background: white;
+  border: 2px solid var(--gray-200);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.share-btn:hover {
+  border-color: var(--toss-blue);
+  color: var(--toss-blue);
+  transform: translateY(-2px);
+}
+
+.share-btn i {
+  font-size: 16px;
+}
+
+/* 플로팅 액션 버튼 */
+.fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  background: var(--toss-blue);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  box-shadow: 0 8px 24px rgba(0, 100, 255, 0.25);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 900;
+}
+
+.fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 32px rgba(0, 100, 255, 0.35);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+</style>
+</head>
+
+<body>
+  <!-- 헤더 -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo-placeholder">
+        <img src="https://i.namu.wiki/i/tRgMbV_vwP06EGcXyZZoDMx4PoGGQaSq1Jw3GVWOXym2NSsCbw7sOiChWPP9xPHlNviaBLoyO_0t3WfgaQEA8g78gnp72JURyR3ouGQRVxlfZIaQrIz4rNvHynDcNWt29rsMFf1rces6XSVpV-isDQ.svg" alt="토스 로고">
+      </div>
+      <nav>
+        <ul class="nav-menu">
+          <li><a href="#calculators">금융계산기</a></li>
+          <li><a href="#intro">서비스</a></li>
+          <li><a href="https://support.toss.im/" target="_blank">고객센터</a></li>
+          <li><a href="https://toss.im/career/jobs" target="_blank">채용</a></li>
+        </ul>
+        <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+          <i class="fas fa-bars"></i>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- 히어로 섹션 -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">
+        금융의 모든 것<br>
+        토스에서 쉽고 간편하게
+      </h1>
+      <p class="hero-subtitle">
+        내 모든 금융 내역을 한눈에 조회하고 통합 관리하세요<br>
+        토스로 시작하는 새로운 금융 생활
+      </p>
+      <button class="hero-cta" onclick="window.open('https://toss.im/', '_blank')">
+        토스 앱 다운로드 →
+      </button>
+    </div>
+  </section>
+
+  <!-- 금융 계산기 섹션 -->
+  <section class="calculator-section" id="calculators">
+    <div class="calculator-section-inner">
+      <div class="calculator-header">
+        <div class="calculator-label">Financial Calculator</div>
+        <h2 class="calculator-title">스마트 금융 계산기</h2>
+        <p class="calculator-desc">
+          복잡한 금융 계산을 쉽고 빠르게<br>
+          토스가 제공하는 무료 금융 계산 서비스
+        </p>
+      </div>
+
+      <!-- 계산기 탭 -->
+      <div class="calculator-tabs">
+        <button class="calculator-tab active" onclick="switchCalculator('exchange')">
+          <i class="fas fa-exchange-alt"></i> 환율 계산기
+        </button>
+        <button class="calculator-tab" onclick="switchCalculator('loan')">
+          <i class="fas fa-hand-holding-usd"></i> 대출 상환
+        </button>
+        <button class="calculator-tab" onclick="switchCalculator('saving')">
+          <i class="fas fa-piggy-bank"></i> 적금 만기
+        </button>
+        <button class="calculator-tab" onclick="switchCalculator('tax')">
+          <i class="fas fa-receipt"></i> 연말정산
+        </button>
+        <button class="calculator-tab" onclick="switchCalculator('property')">
+          <i class="fas fa-home"></i> 부동산 취득세
+        </button>
+      </div>
+
+      <!-- 계산기 컨테이너 -->
+      <div class="calculator-container">
+        
+        <!-- 환율 계산기 -->
+        <div id="exchange-calc" class="calculator-content active">
+          <div class="input-grid">
+            <div class="input-group">
+              <label class="input-label">
+                보내는 금액
+                <span class="tooltip">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-content">환전하실 금액을 입력하세요</span>
+                </span>
+              </label>
+              <div class="input-wrapper">
+                <input type="number" class="input-field" id="exchange-amount" placeholder="1,000,000">
+                <span class="input-addon">KRW</span>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">받는 통화</label>
+              <select class="select-field" id="exchange-currency">
+                <option value="USD">🇺🇸 USD (미국 달러)</option>
+                <option value="EUR">🇪🇺 EUR (유로)</option>
+                <option value="JPY">🇯🇵 JPY (일본 엔)</option>
+                <option value="CNY">🇨🇳 CNY (중국 위안)</option>
+                <option value="GBP">🇬🇧 GBP (영국 파운드)</option>
+                <option value="AUD">🇦🇺 AUD (호주 달러)</option>
+                <option value="CAD">🇨🇦 CAD (캐나다 달러)</option>
+                <option value="CHF">🇨🇭 CHF (스위스 프랑)</option>
+              </select>
+            </div>
+          </div>
+          
+          <button class="calculate-btn" onclick="calculateExchange()">
+            <i class="fas fa-calculator"></i> 환율 계산하기
+          </button>
+          
+          <div id="exchange-result" class="result-container">
+            <h3 class="result-title">💱 환전 결과</h3>
+            <div class="result-item">
+              <span class="result-label">적용 환율</span>
+              <span class="result-value" id="exchange-rate">1,330.50</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">환전 수수료 (1.75%)</span>
+              <span class="result-value" id="exchange-fee">17,500원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">받는 금액</span>
+              <span class="result-value large" id="exchange-total">$738.50</span>
+            </div>
+            
+            <div class="share-buttons">
+              <button class="share-btn" onclick="shareResult('exchange')">
+                <i class="fas fa-share"></i> 공유하기
+              </button>
+              <button class="share-btn" onclick="copyResult('exchange')">
+                <i class="fas fa-copy"></i> 복사하기
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 대출 상환 계산기 -->
+        <div id="loan-calc" class="calculator-content">
+          <div class="input-grid">
+            <div class="input-group">
+              <label class="input-label">
+                대출 금액
+                <span class="tooltip">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-content">대출받으실 총 금액</span>
+                </span>
+              </label>
+              <div class="input-wrapper">
+                <input type="number" class="input-field" id="loan-amount" placeholder="100,000,000">
+                <span class="input-addon">원</span>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">연 이자율 (%)</label>
+              <div class="input-wrapper">
+                <input type="number" class="input-field" id="loan-rate" placeholder="3.5" step="0.1">
+                <span class="input-addon">%</span>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">대출 기간</label>
+              <select class="select-field" id="loan-period">
+                <option value="12">1년</option>
+                <option value="24">2년</option>
+                <option value="36">3년</option>
+                <option value="60">5년</option>
+                <option value="120">10년</option>
+                <option value="180">15년</option>
+                <option value="240">20년</option>
+                <option value="300">25년</option>
+                <option value="360">30년</option>
+              </select>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">상환 방법</label>
+              <div class="radio-group">
+                <div class="radio-wrapper">
+                  <input type="radio" id="loan-type-equal" name="loan-type" value="equal" checked class="radio-input">
+                  <label for="loan-type-equal" class="radio-label">원리금균등</label>
+                </div>
+                <div class="radio-wrapper">
+                  <input type="radio" id="loan-type-principal" name="loan-type" value="principal" class="radio-input">
+                  <label for="loan-type-principal" class="radio-label">원금균등</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <button class="calculate-btn" onclick="calculateLoan()">
+            <i class="fas fa-calculator"></i> 상환액 계산하기
+          </button>
+          
+          <div id="loan-result" class="result-container">
+            <h3 class="result-title">💰 대출 상환 계획</h3>
+            <div class="result-item">
+              <span class="result-label">월 상환액</span>
+              <span class="result-value large" id="loan-monthly">1,234,567원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">총 이자</span>
+              <span class="result-value" id="loan-interest">12,345,678원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">총 상환액</span>
+              <span class="result-value" id="loan-total">112,345,678원</span>
+            </div>
+            
+            <div class="chart-container" id="loan-chart">
+              <!-- 차트가 들어갈 공간 -->
+            </div>
+            
+            <div class="share-buttons">
+              <button class="share-btn" onclick="shareResult('loan')">
+                <i class="fas fa-share"></i> 공유하기
+              </button>
+              <button class="share-btn" onclick="downloadResult('loan')">
+                <i class="fas fa-download"></i> 다운로드
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 적금 만기 계산기 -->
+        <div id="saving-calc" class="calculator-content">
+          <div class="input-grid">
+            <div class="input-group">
+              <label class="input-label">
+                월 납입액
+                <span class="tooltip">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-content">매월 저축하실 금액</span>
+                </span>
+              </label>
+              <div class="input-wrapper">
+                <input type="number" class="input-field" id="saving-monthly" placeholder="500,000">
+                <span class="input-addon">원</span>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">연 이자율 (%)</label>
+              <div class="input-wrapper">
+                <input type="number" class="input-field" id="saving-rate" placeholder="4.5" step="0.1">
+                <span class="input-addon">%</span>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">적금 기간</label>
+              <select class="select-field" id="saving-period">
+                <option value="6">6개월</option>
+                <option value="12">1년</option>
+                <option value="24">2년</option>
+                <option value="36">3년</option>
+                <option value="60">5년</option>
+              </select>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">세금 적용</label>
+              <div class="checkbox-wrapper">
+                <input type="checkbox" id="saving-tax" class="checkbox-input" checked>
+                <label for="saving-tax" class="checkbox-label">세금 15.4% 적용 (일반과세)</label>
+              </div>
+            </div>
+          </div>
+          
+          <button class="calculate-btn" onclick="calculateSaving()">
+            <i class="fas fa-calculator"></i> 만기액 계산하기
+          </button>
+          
+          <div id="saving-result" class="result-container">
+            <h3 class="result-title">🐷 적금 만기 예상액</h3>
+            <div class="result-item">
+              <span class="result-label">총 납입액</span>
+              <span class="result-value" id="saving-principal">6,000,000원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">세전 이자</span>
+              <span class="result-value" id="saving-interest-before">345,678원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">세금 (15.4%)</span>
+              <span class="result-value" id="saving-tax-amount">53,234원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">만기 수령액</span>
+              <span class="result-value large" id="saving-total">6,292,444원</span>
+            </div>
+            
+            <div class="progress-bar">
+              <div class="progress-fill" id="saving-progress" style="width: 0%"></div>
+            </div>
+            
+            <div class="share-buttons">
+              <button class="share-btn" onclick="shareResult('saving')">
+                <i class="fas fa-share"></i> 공유하기
+              </button>
+              <button class="share-btn" onclick="compareProducts('saving')">
+                <i class="fas fa-chart-bar"></i> 상품 비교
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 연말정산 환급금 계산기 -->
+        <div id="tax-calc" class="calculator-content">
+          <div class="input-grid">
+            <div class="input-group">
+              <label class="input-label">
+                연 급여 총액
+                <span class="tooltip">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-content">세전 연봉 총액</span>
+                </span>
+              </label>
+              <div class="input-wrapper">
+                <input type="number" class="input-field" id="tax-salary" placeholder="50,000,000">
+                <span class="input-addon">원</span>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">부양가족 수</label>
+              <select class="select-field" id="tax-dependent">
+                <option value="0">없음</option>
+                <option value="1">1명</option>
+                <option value="2">2명</option>
+                <option value="3">3명</option>
+                <option value="4">4명 이상</option>
+              </select>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">신용카드 사용액</label>
+              <div class="input-wrapper">
+                <input type="number" class="input-field" id="tax-card" placeholder="15,000,000">
+                <span class="input-addon">원</span>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">의료비</label>
+              <div class="input-wrapper">
+                <input type="number" class="input-field" id="tax-medical" placeholder="2,000,000">
+                <span class="input-addon">원</span>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">교육비</label>
+              <div class="input-wrapper">
+                <input type="number" class="input-field" id="tax-education" placeholder="3,000,000">
+                <span class="input-addon">원</span>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">연금보험료</label>
+              <div class="input-wrapper">
+                <input type="number" class="input-field" id="tax-pension" placeholder="4,000,000">
+                <span class="input-addon">원</span>
+              </div>
+            </div>
+          </div>
+          
+          <button class="calculate-btn" onclick="calculateTax()">
+            <i class="fas fa-calculator"></i> 환급금 계산하기
+          </button>
+          
+          <div id="tax-result" class="result-container">
+            <h3 class="result-title">📊 연말정산 예상 결과</h3>
+            <div class="result-item">
+              <span class="result-label">총 급여액</span>
+              <span class="result-value" id="tax-gross">50,000,000원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">과세표준</span>
+              <span class="result-value" id="tax-taxable">38,000,000원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">산출세액</span>
+              <span class="result-value" id="tax-calculated">5,234,000원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">세액공제</span>
+              <span class="result-value" id="tax-deduction">2,345,000원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">예상 환급액</span>
+              <span class="result-value large" id="tax-refund">1,234,567원</span>
+            </div>
+            
+            <div class="share-buttons">
+              <button class="share-btn" onclick="shareResult('tax')">
+                <i class="fas fa-share"></i> 공유하기
+              </button>
+              <button class="share-btn" onclick="showTaxTips()">
+                <i class="fas fa-lightbulb"></i> 절세 팁
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 부동산 취득세 계산기 -->
+        <div id="property-calc" class="calculator-content">
+          <div class="input-grid">
+            <div class="input-group">
+              <label class="input-label">
+                매매가/분양가
+                <span class="tooltip">
+                  <span class="tooltip-icon">?</span>
+                  <span class="tooltip-content">부동산 매입 가격</span>
+                </span>
+              </label>
+              <div class="input-wrapper">
+                <input type="number" class="input-field" id="property-price" placeholder="500,000,000">
+                <span class="input-addon">원</span>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">부동산 유형</label>
+              <select class="select-field" id="property-type">
+                <option value="apt">아파트</option>
+                <option value="house">단독주택</option>
+                <option value="villa">빌라/연립</option>
+                <option value="officetel">오피스텔</option>
+                <option value="land">토지</option>
+                <option value="commercial">상가/사무실</option>
+              </select>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">지역</label>
+              <select class="select-field" id="property-region">
+                <option value="seoul">서울</option>
+                <option value="gyeonggi">경기</option>
+                <option value="busan">부산</option>
+                <option value="daegu">대구</option>
+                <option value="incheon">인천</option>
+                <option value="gwangju">광주</option>
+                <option value="daejeon">대전</option>
+                <option value="ulsan">울산</option>
+                <option value="other">기타 지역</option>
+              </select>
+            </div>
+            
+            <div class="input-group">
+              <label class="input-label">주택 수</label>
+              <select class="select-field" id="property-count">
+                <option value="0">무주택 (생애최초)</option>
+                <option value="1">1주택</option>
+                <option value="2">2주택</option>
+                <option value="3">3주택 이상</option>
+              </select>
+            </div>
+          </div>
+          
+          <button class="calculate-btn" onclick="calculateProperty()">
+            <i class="fas fa-calculator"></i> 취득세 계산하기
+          </button>
+          
+          <div id="property-result" class="result-container">
+            <h3 class="result-title">🏠 부동산 취득세 계산</h3>
+            <div class="result-item">
+              <span class="result-label">매매가</span>
+              <span class="result-value" id="property-value">500,000,000원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">취득세율</span>
+              <span class="result-value" id="property-rate">3.5%</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">취득세</span>
+              <span class="result-value" id="property-tax">15,000,000원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">지방교육세</span>
+              <span class="result-value" id="property-education">1,500,000원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">농어촌특별세</span>
+              <span class="result-value" id="property-rural">200,000원</span>
+            </div>
+            <div class="result-item">
+              <span class="result-label">총 납부액</span>
+              <span class="result-value large" id="property-total">16,700,000원</span>
+            </div>
+            
+            <div class="share-buttons">
+              <button class="share-btn" onclick="shareResult('property')">
+                <i class="fas fa-share"></i> 공유하기
+              </button>
+              <button class="share-btn" onclick="showPropertyGuide()">
+                <i class="fas fa-book"></i> 취득세 가이드
+              </button>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+  </section>
+
+  <!-- 소개 섹션 -->
+  <section class="section intro-section" id="intro">
+    <div class="section-inner">
+      <div class="section-header scroll-element">
+        <div class="section-label">About Toss</div>
+        <h2 class="section-title">새로운 금융의 시작</h2>
+        <p class="section-desc">
+          복잡한 금융을 쉽고 간편하게<br>
+          모든 금융 서비스를 하나의 앱에서
+        </p>
+      </div>
+
+      <div class="intro-grid">
+        <div class="intro-card scroll-element">
+          <div class="intro-card-icon">💳</div>
+          <h3 class="intro-card-title">혁신적인 금융</h3>
+          <p class="intro-card-content">
+            2015년 간편송금으로 시작한 토스는 이제 2,000만 사용자가 신뢰하는 
+            대한민국 대표 금융 플랫폼으로 성장했습니다.
+          </p>
+        </div>
+
+        <div class="intro-card scroll-element">
+          <div class="intro-card-icon">📱</div>
+          <h3 class="intro-card-title">통합 금융 서비스</h3>
+          <p class="intro-card-content">
+            토스뱅크, 토스증권, 토스페이먼츠, 토스보험까지. 
+            은행, 증권, 결제, 보험 서비스를 하나의 앱에서 통합 관리하세요.
+          </p>
+        </div>
+
+        <div class="intro-card scroll-element">
+          <div class="intro-card-icon">🔒</div>
+          <h3 class="intro-card-title">안전한 금융 생활</h3>
+          <p class="intro-card-content">
+            최고 수준의 보안 기술로 고객님의 소중한 자산을 지킵니다. 
+            24시간 안전한 금융 서비스를 제공합니다.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 푸터 -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-content">
+        <div>
+          <div class="footer-brand">toss</div>
+          <p class="footer-desc">
+            (주)비바리퍼블리카<br>
+            사업자 등록번호: 120-88-01280<br>
+            대표: 이승건
+          </p>
+        </div>
+        
+        <div>
+          <h3 class="footer-title">서비스</h3>
+          <ul class="footer-links">
+            <li><a href="https://toss.im/" target="_blank">토스</a></li>
+            <li><a href="https://www.tossbank.com/" target="_blank">토스뱅크</a></li>
+            <li><a href="https://www.tossinvest.com/" target="_blank">토스증권</a></li>
+            <li><a href="https://www.tosspayments.com/" target="_blank">토스페이먼츠</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="footer-title">문의</h3>
+          <ul class="footer-links">
+            <li><a href="https://support.toss.im/" target="_blank">고객센터</a></li>
+            <li><a href="https://business.toss.im/" target="_blank">비즈니스</a></li>
+            <li><a href="https://brand.toss.im/" target="_blank">브랜드</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="footer-title">토스팀</h3>
+          <ul class="footer-links">
+            <li><a href="https://toss.im/team" target="_blank">회사 소개</a></li>
+            <li><a href="https://toss.im/career/jobs" target="_blank">채용</a></li>
+            <li><a href="https://blog.toss.im/" target="_blank">블로그</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        © 2025 Toss Inc. All Rights Reserved.
+      </div>
+    </div>
+  </footer>
+
+  <!-- 토스트 메시지 -->
+  <div id="toast" class="toast"></div>
+
+  <!-- 플로팅 액션 버튼 -->
+  <button class="fab" onclick="scrollToTop()">
+    <i class="fas fa-arrow-up"></i>
+  </button>
+
+  <script>
+    // 계산기 전환
+    function switchCalculator(type) {
+      // 모든 탭과 콘텐츠 비활성화
+      document.querySelectorAll('.calculator-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelectorAll('.calculator-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      
+      // 선택된 탭과 콘텐츠 활성화
+      event.target.closest('.calculator-tab').classList.add('active');
+      document.getElementById(`${type}-calc`).classList.add('active');
+      
+      // 결과 숨기기
+      document.querySelectorAll('.result-container').forEach(result => {
+        result.classList.remove('show');
+      });
+    }
+
+    // 환율 계산
+    function calculateExchange() {
+      const amount = parseFloat(document.getElementById('exchange-amount').value) || 0;
+      const currency = document.getElementById('exchange-currency').value;
+      
+      if (amount <= 0) {
+        showToast('금액을 입력해주세요', 'error');
+        return;
+      }
+      
+      // 실제로는 API에서 실시간 환율을 가져와야 함
+      const rates = {
+        USD: 1330.50,
+        EUR: 1440.30,
+        JPY: 8.95,
+        CNY: 183.45,
+        GBP: 1690.20,
+        AUD: 850.30,
+        CAD: 980.40,
+        CHF: 1490.50
+      };
+      
+      const rate = rates[currency];
+      const fee = amount * 0.0175; // 1.75% 수수료
+      const exchangeAmount = (amount - fee) / rate;
+      
+      document.getElementById('exchange-rate').textContent = `${rate.toLocaleString()}원`;
+      document.getElementById('exchange-fee').textContent = `${fee.toLocaleString()}원`;
+      
+      const currencySymbols = {
+        USD: '$', EUR: '€', JPY: '¥', CNY: '¥',
+        GBP: '£', AUD: 'A$', CAD: 'C$', CHF: 'Fr.'
+      };
+      
+      document.getElementById('exchange-total').textContent = 
+        `${currencySymbols[currency]}${exchangeAmount.toLocaleString(undefined, {maximumFractionDigits: 2})}`;
+      
+      document.getElementById('exchange-result').classList.add('show');
+      showToast('환율 계산이 완료되었습니다', 'success');
+    }
+
+    // 대출 상환 계산
+    function calculateLoan() {
+      const amount = parseFloat(document.getElementById('loan-amount').value) || 0;
+      const rate = parseFloat(document.getElementById('loan-rate').value) || 0;
+      const period = parseInt(document.getElementById('loan-period').value) || 0;
+      const type = document.querySelector('input[name="loan-type"]:checked').value;
+      
+      if (amount <= 0 || rate <= 0) {
+        showToast('대출 정보를 모두 입력해주세요', 'error');
+        return;
+      }
+      
+      const monthlyRate = rate / 100 / 12;
+      let monthlyPayment, totalInterest;
+      
+      if (type === 'equal') {
+        // 원리금균등
+        monthlyPayment = amount * (monthlyRate * Math.pow(1 + monthlyRate, period)) / 
+                        (Math.pow(1 + monthlyRate, period) - 1);
+        totalInterest = (monthlyPayment * period) - amount;
+      } else {
+        // 원금균등
+        const principalPayment = amount / period;
+        totalInterest = 0;
+        let remainingAmount = amount;
+        
+        for (let i = 0; i < period; i++) {
+          totalInterest += remainingAmount * monthlyRate;
+          remainingAmount -= principalPayment;
+        }
+        monthlyPayment = principalPayment + (amount * monthlyRate);
+      }
+      
+      document.getElementById('loan-monthly').textContent = 
+        `${Math.round(monthlyPayment).toLocaleString()}원`;
+      document.getElementById('loan-interest').textContent = 
+        `${Math.round(totalInterest).toLocaleString()}원`;
+      document.getElementById('loan-total').textContent = 
+        `${Math.round(amount + totalInterest).toLocaleString()}원`;
+      
+      document.getElementById('loan-result').classList.add('show');
+      document.getElementById('loan-chart').classList.add('show');
+      
+      showToast('대출 상환 계산이 완료되었습니다', 'success');
+    }
+
+    // 적금 만기 계산
+    function calculateSaving() {
+      const monthly = parseFloat(document.getElementById('saving-monthly').value) || 0;
+      const rate = parseFloat(document.getElementById('saving-rate').value) || 0;
+      const period = parseInt(document.getElementById('saving-period').value) || 0;
+      const applyTax = document.getElementById('saving-tax').checked;
+      
+      if (monthly <= 0 || rate <= 0) {
+        showToast('적금 정보를 모두 입력해주세요', 'error');
+        return;
+      }
+      
+      const principal = monthly * period;
+      const monthlyRate = rate / 100 / 12;
+      
+      // 복리 계산
+      let total = 0;
+      for (let i = 1; i <= period; i++) {
+        total += monthly * Math.pow(1 + monthlyRate, period - i + 1);
+      }
+      
+      const interestBefore = total - principal;
+      const taxAmount = applyTax ? interestBefore * 0.154 : 0;
+      const interestAfter = interestBefore - taxAmount;
+      const finalTotal = principal + interestAfter;
+      
+      document.getElementById('saving-principal').textContent = 
+        `${principal.toLocaleString()}원`;
+      document.getElementById('saving-interest-before').textContent = 
+        `${Math.round(interestBefore).toLocaleString()}원`;
+      document.getElementById('saving-tax-amount').textContent = 
+        `${Math.round(taxAmount).toLocaleString()}원`;
+      document.getElementById('saving-total').textContent = 
+        `${Math.round(finalTotal).toLocaleString()}원`;
+      
+      // 프로그레스 바 애니메이션
+      setTimeout(() => {
+        document.getElementById('saving-progress').style.width = 
+          `${(interestAfter / principal * 100).toFixed(1)}%`;
+      }, 100);
+      
+      document.getElementById('saving-result').classList.add('show');
+      showToast('적금 만기액 계산이 완료되었습니다', 'success');
+    }
+
+    // 연말정산 계산
+    function calculateTax() {
+      const salary = parseFloat(document.getElementById('tax-salary').value) || 0;
+      const dependent = parseInt(document.getElementById('tax-dependent').value) || 0;
+      const card = parseFloat(document.getElementById('tax-card').value) || 0;
+      const medical = parseFloat(document.getElementById('tax-medical').value) || 0;
+      const education = parseFloat(document.getElementById('tax-education').value) || 0;
+      const pension = parseFloat(document.getElementById('tax-pension').value) || 0;
+      
+      if (salary <= 0) {
+        showToast('연봉을 입력해주세요', 'error');
+        return;
+      }
+      
+      // 간소화된 연말정산 계산 (실제는 더 복잡함)
+      const basicDeduction = 1500000 + (dependent * 1500000);
+      const cardDeduction = Math.min(card * 0.15, salary * 0.25);
+      const medicalDeduction = Math.max(0, medical - salary * 0.03) * 0.15;
+      const educationDeduction = education * 0.15;
+      const pensionDeduction = pension * 0.125;
+      
+      const totalDeduction = basicDeduction + cardDeduction + medicalDeduction + 
+                           educationDeduction + pensionDeduction;
+      
+      const taxableIncome = Math.max(0, salary - totalDeduction);
+      
+      // 세율 적용 (간소화)
+      let calculatedTax = 0;
+      if (taxableIncome <= 12000000) {
+        calculatedTax = taxableIncome * 0.06;
+      } else if (taxableIncome <= 46000000) {
+        calculatedTax = 720000 + (taxableIncome - 12000000) * 0.15;
+      } else if (taxableIncome <= 88000000) {
+        calculatedTax = 5820000 + (taxableIncome - 46000000) * 0.24;
+      } else {
+        calculatedTax = 15900000 + (taxableIncome - 88000000) * 0.35;
+      }
+      
+      const taxCredit = totalDeduction * 0.15;
+      const finalTax = Math.max(0, calculatedTax - taxCredit);
+      const refund = Math.round(finalTax * 0.3); // 예상 환급액 (간소화)
+      
+      document.getElementById('tax-gross').textContent = 
+        `${salary.toLocaleString()}원`;
+      document.getElementById('tax-taxable').textContent = 
+        `${Math.round(taxableIncome).toLocaleString()}원`;
+      document.getElementById('tax-calculated').textContent = 
+        `${Math.round(calculatedTax).toLocaleString()}원`;
+      document.getElementById('tax-deduction').textContent = 
+        `${Math.round(taxCredit).toLocaleString()}원`;
+      document.getElementById('tax-refund').textContent = 
+        `${refund.toLocaleString()}원`;
+      
+      document.getElementById('tax-result').classList.add('show');
+      showToast('연말정산 계산이 완료되었습니다', 'success');
+    }
+
+    // 부동산 취득세 계산
+    function calculateProperty() {
+      const price = parseFloat(document.getElementById('property-price').value) || 0;
+      const type = document.getElementById('property-type').value;
+      const region = document.getElementById('property-region').value;
+      const count = parseInt(document.getElementById('property-count').value) || 0;
+      
+      if (price <= 0) {
+        showToast('매매가를 입력해주세요', 'error');
+        return;
+      }
+      
+      // 취득세율 결정 (간소화)
+      let taxRate = 0;
+      if (type === 'apt' || type === 'villa') {
+        if (price <= 600000000) {
+          taxRate = count === 0 ? 0.01 : 0.011;
+        } else if (price <= 900000000) {
+          taxRate = count === 0 ? 0.02 : 0.022;
+        } else {
+          taxRate = count === 0 ? 0.03 : 0.035;
+        }
+      } else {
+        taxRate = 0.04;
+      }
+      
+      // 지역별 중과세 (서울, 경기 일부)
+      if ((region === 'seoul' || region === 'gyeonggi') && count >= 2) {
+        taxRate += 0.02;
+      }
+      
+      const acquisitionTax = price * taxRate;
+      const educationTax = acquisitionTax * 0.1;
+      const ruralTax = price > 900000000 ? acquisitionTax * 0.02 : 0;
+      const totalTax = acquisitionTax + educationTax + ruralTax;
+      
+      document.getElementById('property-value').textContent = 
+        `${price.toLocaleString()}원`;
+      document.getElementById('property-rate').textContent = 
+        `${(taxRate * 100).toFixed(1)}%`;
+      document.getElementById('property-tax').textContent = 
+        `${Math.round(acquisitionTax).toLocaleString()}원`;
+      document.getElementById('property-education').textContent = 
+        `${Math.round(educationTax).toLocaleString()}원`;
+      document.getElementById('property-rural').textContent = 
+        `${Math.round(ruralTax).toLocaleString()}원`;
+      document.getElementById('property-total').textContent = 
+        `${Math.round(totalTax).toLocaleString()}원`;
+      
+      document.getElementById('property-result').classList.add('show');
+      showToast('취득세 계산이 완료되었습니다', 'success');
+    }
+
+    // 결과 공유
+    function shareResult(type) {
+      const text = `토스 금융계산기에서 ${type} 계산 결과를 확인해보세요!`;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: '토스 금융계산기',
+          text: text,
+          url: window.location.href
+        });
+      } else {
+        // 폴백: 클립보드에 복사
+        copyToClipboard(text + '\n' + window.location.href);
+        showToast('링크가 복사되었습니다', 'success');
+      }
+    }
+
+    // 결과 복사
+    function copyResult(type) {
+      const resultElement = document.getElementById(`${type}-result`);
+      const resultText = resultElement.innerText;
+      copyToClipboard(resultText);
+      showToast('결과가 복사되었습니다', 'success');
+    }
+
+    // 클립보드 복사
+    function copyToClipboard(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+
+    // 토스트 메시지
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast show ${type}`;
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    // 상단으로 스크롤
+    function scrollToTop() {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+
+    // 스크롤 애니메이션
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.1
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('show');
+        }
+      });
+    }, observerOptions);
+
+    // 모든 스크롤 요소 관찰
+    document.addEventListener('DOMContentLoaded', () => {
+      const scrollElements = document.querySelectorAll('.scroll-element');
+      scrollElements.forEach(el => observer.observe(el));
+      
+      // 숫자 포맷팅
+      document.querySelectorAll('.input-field[type="number"]').forEach(input => {
+        input.addEventListener('input', function(e) {
+          // 숫자만 허용
+          this.value = this.value.replace(/[^0-9.]/g, '');
+        });
+      });
+    });
+
+    // 헤더 스크롤 효과
+    window.addEventListener('scroll', () => {
+      const header = document.querySelector('.header');
+      const fab = document.querySelector('.fab');
+      
+      if (window.scrollY > 100) {
+        header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.08)';
+        fab.style.opacity = '1';
+        fab.style.transform = 'scale(1)';
+      } else {
+        header.style.boxShadow = 'none';
+        fab.style.opacity = '0';
+        fab.style.transform = 'scale(0.8)';
+      }
+    });
+
+    // 모바일 메뉴 토글
+    function toggleMobileMenu() {
+      // 모바일 메뉴 구현
+      showToast('모바일 메뉴가 준비중입니다', 'info');
+    }
+
+    // 부드러운 스크롤
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          });
+        }
+      });
+    });
+
+    // Cordova 지원
+    document.addEventListener('deviceready', function() {
+      console.log('Cordova is ready');
+      // Cordova 특화 기능 초기화
+    }, false);
+
+    // 추가 기능들
+    function downloadResult(type) {
+      showToast('다운로드 기능이 준비중입니다', 'info');
+    }
+
+    function compareProducts(type) {
+      showToast('상품 비교 기능이 준비중입니다', 'info');
+    }
+
+    function showTaxTips() {
+      showToast('절세 팁이 준비중입니다', 'info');
+    }
+
+    function showPropertyGuide() {
+      showToast('취득세 가이드가 준비중입니다', 'info');
+    }
+  </script>
+</body>
+</html>
