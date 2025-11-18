@@ -23,99 +23,21 @@
         .tab { flex: 1; text-align: center; border: none; background: transparent; color: #8d93ab; font-size: 16px; font-weight: bold; cursor: pointer; padding-bottom: env(safe-area-inset-bottom); height: 60px; display: flex; align-items: center; justify-content: center; }
         .tab.active { background: #0f3460; color: #e94560; border-top: 3px solid #e94560; }
 
-        /* =========================== */
-        /* [업그레이드] 나침반 UI 스타일 */
-        /* =========================== */
-        .compass-container {
-            position: relative;
-            width: 300px;
-            height: 300px;
-            border-radius: 50%;
-            background: radial-gradient(circle at center, #2a2a40 0%, #16213e 100%);
-            box-shadow: 
-                inset 0 0 20px rgba(0,0,0,0.5), /* 안쪽 그림자 */
-                0 10px 30px rgba(0,0,0,0.5),    /* 바깥 그림자 */
-                0 0 0 5px rgba(255,255,255,0.05); /* 테두리 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* 부드러운 회전 */
+        /* [이동됨] 기울기 경고 토글 버튼 (수평계용) */
+        .vibrate-toggle {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            color: #aaa; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold;
+            cursor: pointer; z-index: 50; transition: all 0.3s; display: flex; align-items: center; gap: 5px;
         }
+        .vibrate-toggle.on {
+            background: rgba(233, 69, 96, 0.2); border-color: #e94560; color: #e94560;
+            box-shadow: 0 0 10px rgba(233, 69, 96, 0.3);
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border { 0% { border-color: #e94560; } 50% { border-color: transparent; } 100% { border-color: #e94560; } }
 
-        /* 눈금판 (회전하는 부분) */
-        .compass-dial {
-            width: 100%;
-            height: 100%;
-            position: absolute;
-            border-radius: 50%;
-        }
-
-        /* 눈금 (JS로 생성) */
-        .tick {
-            position: absolute;
-            left: 50%;
-            top: 0;
-            width: 2px;
-            height: 15px;
-            background: #555;
-            transform-origin: center 150px; /* 원 중심 기준 회전 */
-        }
-        .tick.major {
-            width: 3px;
-            height: 25px;
-            background: #fff;
-        }
-        .tick-label {
-            position: absolute;
-            left: 50%;
-            top: 30px;
-            transform: translateX(-50%);
-            font-size: 18px;
-            font-weight: bold;
-            color: #fff;
-        }
-        .tick-label.north { color: #e94560; font-size: 24px; top: 25px; } /* N은 빨간색 */
-
-        /* 고정된 붉은 화살표 (현재 방향) */
-        .fixed-arrow {
-            position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0; 
-            height: 0; 
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-top: 25px solid #e94560; /* 역삼각형 */
-            z-index: 20;
-            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
-        }
-        
-        /* 중앙 십자선 */
-        .crosshair {
-            position: absolute;
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            border: 1px solid rgba(255,255,255,0.1);
-            pointer-events: none;
-        }
-        .crosshair::before, .crosshair::after {
-            content: ''; position: absolute; background: rgba(233, 69, 96, 0.3);
-            top: 50%; left: 50%; transform: translate(-50%, -50%);
-        }
-        .crosshair::before { width: 100%; height: 1px; }
-        .crosshair::after { width: 1px; height: 100%; }
-
-        /* 하단 수치 표시 */
-        .compass-stats {
-            margin-top: 40px;
-            text-align: center;
-        }
-        .compass-value { font-size: 60px; font-weight: bold; font-variant-numeric: tabular-nums; letter-spacing: -2px; }
-        .direction-text { font-size: 24px; color: #e94560; font-weight: bold; margin-top: 5px; }
-
-        /* 기타 스타일 (수평계, 측정 등 유지) */
+        /* 수평계 UI */
         .level-wrap { position: relative; width: min(260px, 70vw); height: min(260px, 70vw); margin-top: -20px; }
         .level-outer { width: 100%; height: 100%; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
         .level-center-mark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; border: 2px solid #fff; border-radius: 50%; z-index: 2; }
@@ -123,6 +45,30 @@
         #bubble.green { background: #4CAF50; box-shadow: 0 0 20px #4CAF50; }
         .angle-text { font-size: 40px; font-weight: bold; margin-top: 30px; }
         .angle-sub { font-size: 16px; color: #aaa; margin-top: 10px; }
+
+        /* 나침반 UI */
+        .compass-container {
+            position: relative; width: 300px; height: 300px; border-radius: 50%;
+            background: radial-gradient(circle at center, #2a2a40 0%, #16213e 100%);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.5), 0 0 0 5px rgba(255,255,255,0.05);
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .compass-dial { width: 100%; height: 100%; position: absolute; border-radius: 50%; }
+        .tick { position: absolute; left: 50%; top: 0; width: 2px; height: 15px; background: #555; transform-origin: center 150px; }
+        .tick.major { width: 3px; height: 25px; background: #fff; }
+        .tick-label { position: absolute; left: 50%; top: 30px; transform: translateX(-50%); font-size: 18px; font-weight: bold; color: #fff; }
+        .tick-label.north { color: #e94560; font-size: 24px; top: 25px; }
+        .fixed-arrow { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 25px solid #e94560; z-index: 20; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); }
+        .crosshair { position: absolute; width: 200px; height: 200px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); pointer-events: none; }
+        .crosshair::before, .crosshair::after { content: ''; position: absolute; background: rgba(233, 69, 96, 0.3); top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .crosshair::before { width: 100%; height: 1px; }
+        .crosshair::after { width: 1px; height: 100%; }
+        .compass-stats { margin-top: 40px; text-align: center; }
+        .compass-value { font-size: 60px; font-weight: bold; font-variant-numeric: tabular-nums; letter-spacing: -2px; }
+        .direction-text { font-size: 24px; color: #e94560; font-weight: bold; margin-top: 5px; }
+
+        /* 기타 UI */
         .camera-btn { background: #0f3460; border: 2px solid #e94560; color: white; padding: 20px; width: 100%; border-radius: 15px; margin-bottom: 15px; text-align: left; display: flex; align-items: center; }
         .camera-btn i { font-size: 24px; margin-right: 15px; }
         .camera-btn div { display: flex; flex-direction: column; }
@@ -150,6 +96,8 @@
 
     <div class="container">
         <div id="levelScreen" class="screen active-screen">
+            <button id="tiltAlarmBtn" class="vibrate-toggle" onclick="toggleTiltAlarm()">🔕 알림 꺼짐</button>
+
             <h2 style="margin-bottom: 30px;">수평계</h2>
             <div class="level-wrap">
                 <div class="level-outer"></div>
@@ -189,13 +137,11 @@
 
         <div id="angleScreen" class="screen">
             <div class="fixed-arrow"></div>
-            
             <div class="compass-container" id="compassContainer">
                 <div class="compass-dial" id="compassDial">
                     </div>
                 <div class="crosshair"></div>
             </div>
-
             <div class="compass-stats">
                 <div class="compass-value" id="compassValue">0°</div>
                 <div class="direction-text" id="directionText">N</div>
