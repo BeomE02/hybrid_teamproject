@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1, viewport-fit=cover">
     <title>스마트 측정 도구</title>
     
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -17,25 +18,38 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; overflow: hidden;
             transition: background-color 0.2s;
         }
+        
+        /* 아이콘 스타일 보정 */
+        .material-symbols-rounded {
+            vertical-align: middle;
+            font-size: inherit; /* 부모 폰트 사이즈 따라감 */
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
         .container { width: 100%; height: 100%; display: flex; flex-direction: column; }
         .screen { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; overflow: hidden; width: 100%; }
         .active-screen { display: flex; }
 
-        /* 하단 탭 메뉴 (5개 대응) */
-        .tab-menu { display: flex; background: #16213e; height: 60px; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); height: calc(60px + env(safe-area-inset-bottom)); z-index: 1000; }
-        .tab { flex: 1; text-align: center; border: none; background: transparent; color: #8d93ab; font-size: 11px; font-weight: bold; cursor: pointer; padding-bottom: env(safe-area-inset-bottom); height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
-        .tab i { font-size: 18px; font-style: normal; }
-        .tab.active { background: #0f3460; color: #e94560; border-top: 3px solid #e94560; }
+        /* 하단 탭 메뉴 */
+        .tab-menu { display: flex; background: #16213e; height: 65px; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); height: calc(65px + env(safe-area-inset-bottom)); z-index: 1000; border-top: 1px solid rgba(255,255,255,0.05); }
+        .tab { flex: 1; text-align: center; border: none; background: transparent; color: #6c757d; font-size: 11px; font-weight: 600; cursor: pointer; padding-bottom: env(safe-area-inset-bottom); height: 65px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: color 0.2s; }
+        .tab span.material-symbols-rounded { font-size: 26px; margin-bottom: 2px; }
+        .tab.active { color: #e94560; }
+        .tab.active span { font-variation-settings: 'FILL' 1; }
 
-        /* 공통 버튼 UI */
-        .vibrate-toggle { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #aaa; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; z-index: 50; transition: all 0.3s; display: flex; align-items: center; gap: 5px; }
-        .vibrate-toggle.on { background: rgba(233, 69, 96, 0.2); border-color: #e94560; color: #e94560; box-shadow: 0 0 10px rgba(233, 69, 96, 0.3); animation: pulse-border 2s infinite; }
-        .action-btn { background: #0f3460; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: bold; margin: 5px; cursor: pointer;}
-        
-        /* 수평계 UI */
+        /* 상단 모드 탭 */
         .level-mode-tabs { display: flex; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 4px; margin-bottom: 30px; gap: 2px; }
         .mode-tab { padding: 10px 15px; border: none; background: transparent; color: #aaa; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 16px; transition: all 0.2s; }
         .mode-tab.active { background: #e94560; color: white; box-shadow: 0 2px 10px rgba(233, 69, 96, 0.4); }
+
+        /* 알림 버튼 */
+        .vibrate-toggle { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #aaa; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; z-index: 50; transition: all 0.3s; display: flex; align-items: center; gap: 6px; }
+        .vibrate-toggle span { font-size: 18px; }
+        .vibrate-toggle.on { background: rgba(233, 69, 96, 0.2); border-color: #e94560; color: #e94560; box-shadow: 0 0 10px rgba(233, 69, 96, 0.3); animation: pulse-border 2s infinite; }
+        
+        .action-btn { background: #0f3460; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: bold; margin: 5px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        
+        /* 수평계 UI */
         .level-wrap { position: relative; width: min(260px, 70vw); height: min(260px, 70vw); display: none; }
         .level-wrap.active { display: block; }
         .level-outer { width: 100%; height: 100%; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
@@ -54,7 +68,7 @@
 
         /* 측정 UI */
         .camera-btn { background: #0f3460; border: 2px solid #e94560; color: white; padding: 20px; width: 100%; border-radius: 15px; margin-bottom: 15px; text-align: left; display: flex; align-items: center; }
-        .camera-btn i { font-size: 24px; margin-right: 15px; }
+        .camera-btn .material-symbols-rounded { font-size: 32px; margin-right: 15px; color: #e94560; }
         .camera-btn div { display: flex; flex-direction: column; }
         .camera-btn span { font-size: 18px; font-weight: bold; }
         .camera-btn small { font-size: 13px; color: #ccc; margin-top: 4px; }
@@ -100,72 +114,41 @@
         #map { width: 100%; flex: 1; background: #222; }
         .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
 
-        /* [신규] SOS 화면 UI */
-        .sos-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-            width: 100%;
-            max-width: 400px;
-        }
-        .sos-btn {
-            padding: 30px;
-            border: none;
-            border-radius: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            transition: all 0.2s;
-        }
-        .sos-btn i { font-size: 32px; font-style: normal; }
-        
-        /* 플래시 버튼 */
+        /* SOS 화면 UI */
+        .sos-grid { display: grid; grid-template-columns: 1fr; gap: 20px; width: 100%; max-width: 400px; }
+        .sos-btn { padding: 30px; border: none; border-radius: 20px; font-size: 22px; font-weight: bold; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: all 0.2s; }
+        .sos-btn span { font-size: 36px; }
         .btn-flash { background: #333; border: 2px solid #fff; }
         .btn-flash.active { background: #fff; color: #333; box-shadow: 0 0 30px white; }
-        
-        /* 사이렌 버튼 */
         .btn-siren { background: #1a1a2e; border: 2px solid #e94560; color: #e94560; }
         .btn-siren.active { background: #e94560; color: white; animation: pulse-siren 0.5s infinite; }
         @keyframes pulse-siren { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-        /* SOS 버튼 */
         .btn-sos { background: #b71c1c; border: 2px solid #ff5252; grid-row: span 2; }
         .btn-sos.active { background: #ff5252; box-shadow: 0 0 40px #ff5252; animation: pulse-sos 1s infinite; }
         
-        /* 화면 플래시 효과용 오버레이 (아이폰 등 하드웨어 제어 불가시 사용) */
-        #screenFlashOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 9999; pointer-events: none;
-            opacity: 0; transition: opacity 0.1s;
-        }
+        #screenFlashOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.1s; }
         #screenFlashOverlay.active { opacity: 1; }
-
         @keyframes pulse-border { 0% { border-color: #e94560; } 50% { border-color: transparent; } 100% { border-color: #e94560; } }
+        
         #startOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
         .big-start-btn { padding: 20px 50px; font-size: 22px; background: #e94560; color: white; border: none; border-radius: 50px; margin-top: 30px; font-weight: bold; box-shadow: 0 0 20px rgba(233, 69, 96, 0.5); }
     </style>
 </head>
 <body>
     <div id="screenFlashOverlay"></div>
-
     <div id="startOverlay">
         <h1 style="font-size: 24px; margin-bottom: 20px;">⚠️ 시작하기</h1>
         <p style="color: #ccc;">센서 및 위치 권한을 허용해야<br>모든 기능이 작동합니다.</p>
         <button class="big-start-btn" onclick="requestPermissions()">앱 시작하기</button>
     </div>
-
     <video id="flashVideo" playsinline style="display:none;"></video>
     <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;">
 
     <div class="container">
         <div id="levelScreen" class="screen active-screen">
-            <button id="tiltAlarmBtn" class="vibrate-toggle" onclick="toggleTiltAlarm()">🔕 알림 꺼짐</button>
+            <button id="tiltAlarmBtn" class="vibrate-toggle" onclick="toggleTiltAlarm()">
+                <span class="material-symbols-rounded">notifications_off</span> 알림 꺼짐
+            </button>
             <h2 style="margin-bottom: 20px;">수평계</h2>
             <div class="level-mode-tabs">
                 <button class="mode-tab active" id="btnModeSurface" onclick="setLevelMode('surface')">원형</button>
@@ -180,15 +163,23 @@
             </div>
             <div class="angle-text" id="tiltAngle">0.0°</div>
             <div class="angle-sub" id="levelModeText">평면 모드 (X/Y축)</div>
-            <button class="action-btn" onclick="calibrateLevel()" style="margin-top: 20px;">0점 조절</button>
+            <button class="action-btn" onclick="calibrateLevel()">
+                <span class="material-symbols-rounded">refresh</span> 0점 조절
+            </button>
         </div>
 
         <div id="measureScreen" class="screen">
             <div id="measureMenu" style="width: 100%; max-width: 400px;">
                 <h2 style="text-align: center; margin-bottom: 10px;">길이 측정</h2>
                 <p style="text-align: center; margin-bottom: 30px; color: #888;"><b>2단계(기준설정 → 측정)</b>로 진행됩니다.</p>
-                <button class="camera-btn" onclick="startMeasure('card')"> <i>💳</i><div><span>신용카드 기준 (85.6mm)</span><small>신용카드와 함께 사진을 찍으세요</small></div> </button>
-                <button class="camera-btn" onclick="startMeasure('coin')"> <i>🪙</i><div><span>500원 동전 기준 (26.5mm)</span><small>500원 동전과 함께 사진을 찍으세요</small></div> </button>
+                <button class="camera-btn" onclick="startMeasure('card')"> 
+                    <span class="material-symbols-rounded">credit_card</span>
+                    <div><span>신용카드 기준 (85.6mm)</span><small>신용카드와 함께 사진을 찍으세요</small></div> 
+                </button>
+                <button class="camera-btn" onclick="startMeasure('coin')"> 
+                    <span class="material-symbols-rounded">monetization_on</span>
+                    <div><span>500원 동전 기준 (26.5mm)</span><small>500원 동전과 함께 사진을 찍으세요</small></div> 
+                </button>
             </div>
             <canvas id="measureCanvas"></canvas>
             <div id="stepBar">
@@ -201,13 +192,17 @@
             <div id="finalResult">
                 <div style="font-size: 14px; color:#ccc;">측정 결과</div>
                 <div id="resultValue" style="font-size: 42px; font-weight: bold; margin: 10px 0; color: #fff;">0 mm</div>
-                <button class="action-btn" onclick="resetMeasure()">다시 측정하기</button>
+                <button class="action-btn" onclick="resetMeasure()">
+                    <span class="material-symbols-rounded">replay</span> 다시 측정
+                </button>
             </div>
         </div>
 
         <div id="angleScreen" class="screen">
             <div class="gps-panel">
-                <button id="btnSaveLoc" class="gps-btn" onclick="saveCurrentLocation()">📍 현재 위치를 타겟으로 기억</button>
+                <button id="btnSaveLoc" class="gps-btn" onclick="saveCurrentLocation()">
+                    <span class="material-symbols-rounded">my_location</span> 현재 위치를 타겟으로 기억
+                </button>
                 <div id="gpsInfo" class="gps-info">
                     <div style="color:#fff; font-size:14px;">타겟까지 거리</div>
                     <div id="gpsDist" class="gps-dist">0 m</div>
@@ -237,26 +232,34 @@
             <h2 style="margin-bottom: 40px; color: #e94560;">비상 구조 도구</h2>
             <div class="sos-grid">
                 <button class="sos-btn btn-flash" id="btnFlash" onclick="toggleFlashlight()">
-                    <i>🔦</i> 손전등
+                    <span class="material-symbols-rounded">flashlight_on</span> 손전등
                 </button>
                 <button class="sos-btn btn-siren" id="btnSiren" onclick="toggleSiren()">
-                    <i>🔊</i> 사이렌
+                    <span class="material-symbols-rounded">volume_up</span> 사이렌
                 </button>
                 <button class="sos-btn btn-sos" id="btnSOS" onclick="toggleSOS()">
-                    <i>🆘</i> SOS 구조신호<br><span style="font-size:14px; font-weight:normal;">(자동 깜빡임)</span>
+                    <span class="material-symbols-rounded">sos</span> 구조신호<br><span style="font-size:14px; font-weight:normal;">(자동 깜빡임)</span>
                 </button>
             </div>
-            <p style="margin-top: 30px; color: #888; font-size: 13px; text-align: center;">
-                ※ 화면 깜빡임이 발생합니다.<br>광과민성 발작이 있는 분은 주의하세요.
-            </p>
+            <p style="margin-top: 30px; color: #888; font-size: 13px; text-align: center;">※ 화면 깜빡임 주의</p>
         </div>
 
         <div class="tab-menu">
-            <button class="tab active" onclick="switchTab('level', this)"><i>📏</i>수평계</button>
-            <button class="tab" onclick="switchTab('measure', this)"><i>📐</i>측정</button>
-            <button class="tab" onclick="switchTab('angle', this)"><i>🧭</i>나침반</button>
-            <button class="tab" onclick="switchTab('gps', this)"><i>🚀</i>속도/지도</button>
-            <button class="tab" onclick="switchTab('sos', this)"><i>🆘</i>SOS</button>
+            <button class="tab active" onclick="switchTab('level', this)">
+                <span class="material-symbols-rounded">screen_rotation</span> 수평계
+            </button>
+            <button class="tab" onclick="switchTab('measure', this)">
+                <span class="material-symbols-rounded">straighten</span> 측정
+            </button>
+            <button class="tab" onclick="switchTab('angle', this)">
+                <span class="material-symbols-rounded">explore</span> 나침반
+            </button>
+            <button class="tab" onclick="switchTab('gps', this)">
+                <span class="material-symbols-rounded">speed</span> 속도/지도
+            </button>
+            <button class="tab" onclick="switchTab('sos', this)">
+                <span class="material-symbols-rounded">e911_emergency</span> SOS
+            </button>
         </div>
     </div>
 
