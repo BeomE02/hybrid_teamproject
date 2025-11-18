@@ -2,20 +2,22 @@
 // 전역 변수
 // ===========================
 let currentMode = 'level';
-let levelDisplayMode = 'surface'; // 'surface', 'bar_h', 'bar_v'
+let levelDisplayMode = 'surface';
 
 let calibration = { x: 0, y: 0 };
 let rawSensor = { x: 0, y: 0 };
+
 let measureState = 0; 
 let measureRefType = 'card'; 
 let pixelsPerMM = 0; 
 let refLine = null; 
 let targetLine = null;
+
 let isTiltAlarmOn = false;
 let lastAlertTime = 0;
 let audioCtx = null;
 
-// [신규] GPS 관련 변수
+// GPS 관련 변수
 let myLat = 0, myLng = 0;
 let targetLat = null, targetLng = null;
 let watchId = null;
@@ -23,18 +25,29 @@ let watchId = null;
 const REF_SIZE = { card: 85.60, coin: 26.50 };
 
 // ===========================
-// 1. 초기화
+// 1. 초기화 및 권한 요청
 // ===========================
 function requestPermissions() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
+
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        alert("⚠️ 보안 연결(HTTPS)이 필요합니다.");
+    }
+
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(res => {
-                if (res === 'granted') { startAppSystem(); }
-                else { alert('권한이 거부되었습니다.'); hideOverlay(); }
+                if (res === 'granted') { 
+                    startAppSystem(); 
+                } else { 
+                    alert('권한이 거부되었습니다.\n설정에서 권한을 허용해주세요.'); 
+                    hideOverlay(); 
+                }
             })
-            .catch(e => { alert("오류: " + e); startAppSystem(); });
+            .catch(e => { 
+                alert("권한 요청 오류: " + e); 
+                startAppSystem(); 
+            });
     } else { 
         startAppSystem(); 
     }
@@ -53,9 +66,15 @@ function hideOverlay() {
 
 function startSensors() {
     window.addEventListener('devicemotion', handleMotion, true);
-    if ('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-    else window.addEventListener('deviceorientation', handleOrientation, true);
-    document.getElementById('cameraInput').addEventListener('change', handleImageUpload);
+    
+    if ('ondeviceorientationabsolute' in window) {
+        window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+    } else {
+        window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+    
+    const camInput = document.getElementById('cameraInput');
+    if (camInput) camInput.addEventListener('change', handleImageUpload);
 }
 
 function startGPS() {
@@ -66,7 +85,7 @@ function startGPS() {
                 myLng = pos.coords.longitude;
                 updateGPSUI();
             },
-            (err) => console.log("GPS Error"),
+            (err) => console.log("GPS Error: " + err.message),
             { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
         );
     }
@@ -78,30 +97,38 @@ function playBeep() {
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
     osc.connect(gainNode); gainNode.connect(audioCtx.destination);
-    osc.type = 'sine'; osc.frequency.value = 600; gainNode.gain.value = 0.1; 
-    osc.start(); setTimeout(() => { osc.stop(); }, 100);
+    osc.type = 'sine'; 
+    osc.frequency.value = 600; 
+    gainNode.gain.value = 0.1; 
+    osc.start(); 
+    setTimeout(() => { osc.stop(); }, 100);
 }
 
 // ===========================
-// 2. 수평계 기능 (중앙 스냅 보정 적용)
+// 2. 수평계 기능
 // ===========================
 function toggleTiltAlarm() {
     isTiltAlarmOn = !isTiltAlarmOn;
     const btn = document.getElementById('tiltAlarmBtn');
+    
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
     if (isTiltAlarmOn) {
-        btn.textContent = "⚠️ 알림 켜짐"; btn.classList.add('on');
-        if(navigator.vibrate) navigator.vibrate([200]); playBeep();
+        btn.textContent = "⚠️ 알림 켜짐"; 
+        btn.classList.add('on');
+        if(navigator.vibrate) navigator.vibrate([200]); 
+        playBeep();
     } else {
-        btn.textContent = "🔕 알림 꺼짐"; btn.classList.remove('on');
-        document.body.style.backgroundColor = '#1a1a2e';
+        btn.textContent = "🔕 알림 꺼짐"; 
+        btn.classList.remove('on');
+        document.body.style.backgroundColor = '#1a1a2e'; 
     }
 }
 
 function setLevelMode(mode) {
     levelDisplayMode = mode;
+    
     document.getElementById('btnModeSurface').classList.remove('active');
     document.getElementById('btnModeBarH').classList.remove('active');
     document.getElementById('btnModeBarV').classList.remove('active');
@@ -109,24 +136,27 @@ function setLevelMode(mode) {
     const surfaceUI = document.getElementById('surfaceLevel');
     const barUI = document.getElementById('barLevelContainer');
     const barWrap = document.getElementById('barLevel');
+    const textUI = document.getElementById('levelModeText');
     
     if (mode === 'surface') {
         document.getElementById('btnModeSurface').classList.add('active');
         surfaceUI.classList.add('active');
         barUI.classList.remove('active');
-        document.getElementById('levelModeText').textContent = "평면 모드 (전체 수평)";
-    } else if (mode === 'bar_h') {
+        textUI.textContent = "평면 모드 (전체 수평)";
+    } 
+    else if (mode === 'bar_h') {
         document.getElementById('btnModeBarH').classList.add('active');
         surfaceUI.classList.remove('active');
         barUI.classList.add('active');
-        barWrap.classList.remove('vertical-mode');
-        document.getElementById('levelModeText').textContent = "가로 모드 (X축)";
-    } else if (mode === 'bar_v') {
+        barWrap.classList.remove('vertical-mode'); 
+        textUI.textContent = "가로 모드 (X축)";
+    } 
+    else if (mode === 'bar_v') {
         document.getElementById('btnModeBarV').classList.add('active');
         surfaceUI.classList.remove('active');
         barUI.classList.add('active');
-        barWrap.classList.add('vertical-mode');
-        document.getElementById('levelModeText').textContent = "세로 모드 (Y축)";
+        barWrap.classList.add('vertical-mode'); 
+        textUI.textContent = "세로 모드 (Y축)";
     }
 }
 
@@ -137,6 +167,7 @@ function handleMotion(event) {
     if (!acc) return;
 
     let x = acc.x; let y = acc.y;
+
     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) { x = -x; y = -y; }
 
     rawSensor.x = x; rawSensor.y = y;
@@ -145,24 +176,18 @@ function handleMotion(event) {
     let isLevel = false;
     let displayAngle = 0;
 
-    // [수정됨] 원형 수평계 로직
     if (levelDisplayMode === 'surface') {
-        const limit = 100; // 최대 이동 거리
+        const limit = 100;
         let moveX = x * 10; 
         let moveY = y * -10;
 
-        // 수평 판정 (0.5도 이내)
         if(Math.abs(x) < 0.5 && Math.abs(y) < 0.5) {
-            // [핵심 수정] 수평이면 강제로 중앙(0,0)으로 고정! (스냅 기능)
-            moveX = 0;
-            moveY = 0;
+            moveX = 0; moveY = 0; 
             document.getElementById('bubble').classList.add('green'); 
             isLevel = true;
         } else {
             document.getElementById('bubble').classList.remove('green'); 
             isLevel = false;
-            
-            // 원형 범위 제한
             const dist = Math.sqrt(moveX*moveX + moveY*moveY);
             if (dist > limit) { moveX = (moveX/dist)*limit; moveY = (moveY/dist)*limit; }
         }
@@ -172,22 +197,24 @@ function handleMotion(event) {
         displayAngle = Math.sqrt(x*x+y*y)*5;
 
     } else {
-        // [수정됨] 막대형 수평계 로직
         const barBubble = document.getElementById('barBubble');
-        let tilt = (levelDisplayMode === 'bar_h') ? x * 5 : y * -5;
+        let tilt = 0;
+
+        if (levelDisplayMode === 'bar_h') {
+            tilt = x * 5; 
+        } else {
+            tilt = y * -5; 
+        }
         
         let barMove = tilt * 5; 
         
-        // 수평 판정 (1.0도 이내)
         if (Math.abs(tilt) < 1.0) {
-            // [핵심 수정] 수평이면 강제로 중앙(0px)으로 고정!
-            barMove = 0;
+            barMove = 0; 
             barBubble.classList.add('green'); 
             isLevel = true;
         } else {
             barBubble.classList.remove('green'); 
             isLevel = false;
-            // 범위 제한
             if (barMove > 120) barMove = 120; 
             if (barMove < -120) barMove = -120;
         }
@@ -198,17 +225,17 @@ function handleMotion(event) {
 
     document.getElementById('tiltAngle').textContent = Math.min(displayAngle, 90).toFixed(1) + '°';
     
-    // 알림 상태 복구
     if(isLevel && isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e';
 
-    // 경고 알림
     if (isTiltAlarmOn && !isLevel) {
         const now = Date.now();
-        if (now - lastAlertTime > 400) {
+        if (now - lastAlertTime > 400) { 
             if(navigator.vibrate) navigator.vibrate([100]);
             playBeep();
             document.body.style.backgroundColor = '#4a1a1a'; 
-            setTimeout(() => { if(isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e'; }, 100);
+            setTimeout(() => { 
+                if(isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e'; 
+            }, 100);
             lastAlertTime = now;
         }
     }
@@ -221,27 +248,37 @@ function calibrateLevel() {
 }
 
 // ===========================
-// 3. 나침반 + GPS 기능 (유지)
+// 3. 나침반 + GPS 기능 (UI 축소 적용)
 // ===========================
 function saveCurrentLocation() {
     if (myLat === 0 && myLng === 0) { alert("GPS 신호를 기다리는 중입니다..."); return; }
     targetLat = myLat; targetLng = myLng;
+    
     document.getElementById('btnSaveLoc').style.display = 'none';
     document.getElementById('gpsInfo').style.display = 'block';
     document.getElementById('targetArrow').style.display = 'block';
+    
+    // [핵심] 나침반 영역 축소 (Shrink)
+    document.getElementById('compassArea').classList.add('shrink');
+    
     alert("현재 위치가 타겟으로 저장되었습니다.");
     updateGPSUI();
 }
 
 function clearLocation() {
     targetLat = null; targetLng = null;
+    
     document.getElementById('btnSaveLoc').style.display = 'flex';
     document.getElementById('gpsInfo').style.display = 'none';
     document.getElementById('targetArrow').style.display = 'none';
+    
+    // [핵심] 나침반 영역 복구
+    document.getElementById('compassArea').classList.remove('shrink');
 }
 
 function updateGPSUI() {
     if (targetLat === null) return;
+
     const R = 6371e3;
     const φ1 = myLat * Math.PI/180;
     const φ2 = targetLat * Math.PI/180;
@@ -250,17 +287,21 @@ function updateGPSUI() {
     const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     const dist = R * c;
+
     document.getElementById('gpsDist').textContent = Math.round(dist) + " m";
+
     const y = Math.sin(Δλ) * Math.cos(φ2);
     const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
     const θ = Math.atan2(y, x);
     const bearing = (θ * 180 / Math.PI + 360) % 360;
+
     document.getElementById('targetArrow').style.transform = `rotate(${bearing}deg)`;
 }
 
 function drawCompassTicks() {
     const dial = document.getElementById('compassDial');
-    if(dial.querySelector('.tick')) return;
+    if(dial.querySelector('.tick')) return; 
+    
     const directions = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' };
     for (let i = 0; i < 360; i += 2) {
         if (i % 10 === 0) {
@@ -283,6 +324,7 @@ function drawCompassTicks() {
         }
     }
 }
+
 function handleOrientation(event) {
     if (currentMode !== 'angle') return;
     let h = event.webkitCompassHeading || (event.alpha ? 360 - event.alpha : 0);
@@ -294,7 +336,7 @@ function handleOrientation(event) {
 }
 
 // ===========================
-// 4. 탭 전환 (유지)
+// 4. 탭 전환
 // ===========================
 function switchTab(mode, btn) {
     currentMode = mode;
@@ -306,7 +348,7 @@ function switchTab(mode, btn) {
 }
 
 // ===========================
-// 5. 길이 측정 (유지)
+// 5. 길이 측정
 // ===========================
 function startMeasure(type) { measureRefType = type; document.getElementById('cameraInput').click(); }
 function handleImageUpload(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(evt) { const img = new Image(); img.onload = function() { setupCanvas(img); }; img.src = evt.target.result; }; reader.readAsDataURL(file); }
