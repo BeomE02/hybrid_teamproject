@@ -17,7 +17,6 @@ let isTiltAlarmOn = false;
 let lastAlertTime = 0;
 let audioCtx = null;
 
-// GPS
 let myLat = 0, myLng = 0;
 let targetLat = null, targetLng = null;
 let watchId = null;
@@ -29,7 +28,7 @@ let flashStream = null;
 let sirenOsc = null;
 let sirenInterval = null;
 let sosInterval = null;
-let emergencyMode = null; // 'flash', 'siren', 'sos'
+let isSOSOn = false; // 모스 부호 루프 제어
 let tapCount = 0;
 let tapTimer = null;
 
@@ -56,7 +55,7 @@ function requestPermissions() {
         startAppSystem(); 
     }
     
-    // 비상 정지용 3연타 리스너
+    // 3연타 비상 정지 리스너
     const overlay = document.getElementById('emergencyOverlay');
     overlay.addEventListener('touchstart', handleEmergencyTap);
     overlay.addEventListener('click', handleEmergencyTap);
@@ -96,59 +95,14 @@ function startGPS() {
 }
 
 // ===========================
-// [핵심] 비상 기능 (플래시/사이렌/SOS)
+// [핵심] 비상 기능
 // ===========================
 
-async function triggerEmergency(mode) {
-    // 오디오 컨텍스트 깨우기
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') await audioCtx.resume();
-
-    // 기존 모드가 켜져있으면 끔 (토글 아님, 재시작)
-    emergencyStop();
-    
-    emergencyMode = mode;
-    const overlay = document.getElementById('emergencyOverlay');
-    overlay.classList.add('active'); // 전체 화면 덮기
-    
-    if (mode === 'flash') {
-        // 1. 손전등 모드 (하드웨어 Torch + 화면 흰색)
-        await setHardwareFlash(true);
-        overlay.style.backgroundColor = 'white';
-    } 
-    else if (mode === 'siren') {
-        // 2. 사이렌 모드 (소리 + 하드웨어 깜빡임 + 화면 빨강/파랑)
-        startSirenSound();
-        let toggle = false;
-        sirenInterval = setInterval(() => {
-            toggle = !toggle;
-            // 화면 색상
-            overlay.style.backgroundColor = toggle ? '#ff0000' : '#0000ff';
-            // 하드웨어 플래시도 같이 깜빡임
-            setHardwareFlash(toggle);
-        }, 300); // 0.3초 간격
-    } 
-    else if (mode === 'sos') {
-        // 3. SOS 모드 (모스 부호 대신 강력한 점멸)
-        // 하늘에 보내는 신호이므로 하드웨어 플래시 중요
-        startSirenSound(true); // SOS는 비프음
-        let toggle = false;
-        sosInterval = setInterval(() => {
-            toggle = !toggle;
-            overlay.style.backgroundColor = toggle ? 'white' : 'black';
-            setHardwareFlash(toggle);
-        }, 500); // 0.5초 간격
-    }
-}
-
-// 3연타 감지 및 정지
+// 3연타 감지
 function handleEmergencyTap(e) {
-    e.preventDefault(); // 줌 방지
+    e.preventDefault();
     tapCount++;
-    
     if (tapTimer) clearTimeout(tapTimer);
-    
-    // 0.4초 안에 다음 터치가 없으면 카운트 리셋
     tapTimer = setTimeout(() => { tapCount = 0; }, 400);
     
     if (tapCount >= 3) {
@@ -157,106 +111,140 @@ function handleEmergencyTap(e) {
     }
 }
 
-function emergencyStop() {
-    // 모든 타이머/소리/플래시/오버레이 정지
-    if (sirenInterval) clearInterval(sirenInterval);
-    if (sosInterval) clearInterval(sosInterval);
+async function triggerEmergency(mode) {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    emergencyStop(); // 기존 모드 정지
     
+    const overlay = document.getElementById('emergencyOverlay');
+    overlay.classList.add('active'); // 3연타 감지용 오버레이 활성화
+    
+    if (mode === 'flash') {
+        // 1. 손전등 (최대 밝기)
+        // 화면 흰색 + 하드웨어 플래시 켜기
+        overlay.style.backgroundColor = 'white';
+        await setHardwareFlash(true);
+    } 
+    else if (mode === 'siren') {
+        // 2. 사이렌 (소리 + 깜빡임)
+        startSirenSound(); // 경찰차 소리
+        let toggle = false;
+        sirenInterval = setInterval(() => {
+            toggle = !toggle;
+            overlay.style.backgroundColor = toggle ? '#ff0000' : '#0000ff'; // 빨강/파랑
+            setHardwareFlash(toggle);
+        }, 300);
+    } 
+    else if (mode === 'sos') {
+        // 3. SOS 모스 부호 (화면 검정 + 플래시 패턴)
+        overlay.style.backgroundColor = 'black'; // 화면은 어둡게 (플래시 집중)
+        isSOSOn = true;
+        runSOSPattern(); // 모스 부호 루프 시작
+    }
+}
+
+function emergencyStop() {
+    isSOSOn = false; // SOS 루프 정지
+    if (sirenInterval) clearInterval(sirenInterval);
     stopSirenSound();
     setHardwareFlash(false);
     
     const overlay = document.getElementById('emergencyOverlay');
     overlay.classList.remove('active');
-    overlay.style.backgroundColor = 'black'; // 리셋
-    
-    emergencyMode = null;
+    overlay.style.backgroundColor = 'black'; 
 }
 
-// 하드웨어 플래시 제어 (안드로이드 크롬 등)
+// [모스 부호 로직]
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function runSOSPattern() {
+    const DOT = 200;   // 짧게
+    const DASH = 600;  // 길게
+    const GAP = 200;   // 신호 간 간격
+    const LETTER_GAP = 600; // 글자 간 간격
+    const WORD_GAP = 1500;  // SOS 반복 간격
+
+    // 플래시 켜는 함수 (켜져있는 동안 대기)
+    const flashPulse = async (duration) => {
+        if (!isSOSOn) return;
+        await setHardwareFlash(true);
+        await sleep(duration);
+        await setHardwareFlash(false);
+    };
+
+    while (isSOSOn) {
+        // S (...)
+        await flashPulse(DOT); await sleep(GAP);
+        await flashPulse(DOT); await sleep(GAP);
+        await flashPulse(DOT); await sleep(LETTER_GAP);
+        
+        if (!isSOSOn) break;
+
+        // O (---)
+        await flashPulse(DASH); await sleep(GAP);
+        await flashPulse(DASH); await sleep(GAP);
+        await flashPulse(DASH); await sleep(LETTER_GAP);
+
+        if (!isSOSOn) break;
+
+        // S (...)
+        await flashPulse(DOT); await sleep(GAP);
+        await flashPulse(DOT); await sleep(GAP);
+        await flashPulse(DOT); await sleep(WORD_GAP);
+    }
+}
+
+// 하드웨어 플래시 제어
 async function setHardwareFlash(on) {
     try {
         if (on) {
             if (!flashStream) {
-                flashStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
-                });
+                flashStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             }
             const track = flashStream.getVideoTracks()[0];
-            const capabilities = track.getCapabilities();
-            if (capabilities.torch) {
-                await track.applyConstraints({ advanced: [{ torch: true }] });
-            }
+            const cap = track.getCapabilities();
+            if (cap.torch) await track.applyConstraints({ advanced: [{ torch: true }] });
         } else {
             if (flashStream) {
                 const track = flashStream.getVideoTracks()[0];
-                const capabilities = track.getCapabilities();
-                // 끄기 시도
-                if(capabilities.torch) {
-                   await track.applyConstraints({ advanced: [{ torch: false }] });
-                }
-                // 스트림 완전히 닫기
-                track.stop();
-                flashStream = null;
+                const cap = track.getCapabilities();
+                if(cap.torch) await track.applyConstraints({ advanced: [{ torch: false }] });
+                // 스트림을 닫지 않고 끄기만 함 (반복 사용 위함), SOS 종료 시엔 닫힐 수 있음
+                // 여기서는 간단히 끄기만.
             }
         }
-    } catch (e) {
-        console.log("Flash control failed:", e);
+    } catch (e) { console.log("Flash error:", e); }
+    
+    // 아이폰용 화면 플래시 연동 (SOS 모드는 화면 검정이므로 제외)
+    if (!isSOSOn) {
+        const screenOverlay = document.getElementById('screenFlashOverlay');
+        if(on) screenOverlay.classList.add('active');
+        else screenOverlay.classList.remove('active');
     }
 }
 
-// 사이렌 소리 생성
-function startSirenSound(isBeep = false) {
+// 사이렌 소리
+function startSirenSound() {
     if (sirenOsc) stopSirenSound();
-    
     sirenOsc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    sirenOsc.connect(gain);
-    gain.connect(audioCtx.destination);
-    
-    if (isBeep) {
-        // SOS 비프음
-        sirenOsc.type = 'square';
-        sirenOsc.frequency.value = 880;
-        // SOS 리듬 (간단히 on/off는 interval에서 처리하되 소리는 계속 나게 하거나 끊거나)
-        // 여기선 계속 울리게 하고 톤만 유지
-    } else {
-        // 경찰 사이렌 (Wail)
-        sirenOsc.type = 'sawtooth';
-        const now = audioCtx.currentTime;
-        sirenOsc.frequency.setValueAtTime(600, now);
-        sirenOsc.frequency.linearRampToValueAtTime(1200, now + 0.5);
-        sirenOsc.frequency.linearRampToValueAtTime(600, now + 1.0);
-        
-        // 루프 LFO
-        const lfo = audioCtx.createOscillator();
-        lfo.type = 'triangle';
-        lfo.frequency.value = 1.0; 
-        const lfoGain = audioCtx.createGain();
-        lfoGain.gain.value = 600;
-        lfo.connect(lfoGain);
-        lfoGain.connect(sirenOsc.frequency);
-        lfo.start();
-        sirenOsc.lfo = lfo;
-    }
-    
-    gain.gain.value = 1.0; // 최대 볼륨
-    sirenOsc.start();
+    sirenOsc.type = 'sawtooth';
+    sirenOsc.connect(gain); gain.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    sirenOsc.frequency.setValueAtTime(600, now);
+    sirenOsc.frequency.linearRampToValueAtTime(1200, now + 0.5);
+    sirenOsc.frequency.linearRampToValueAtTime(600, now + 1.0);
+    const lfo = audioCtx.createOscillator(); lfo.type = 'triangle'; lfo.frequency.value = 1.0;
+    const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 600;
+    lfo.connect(lfoGain); lfoGain.connect(sirenOsc.frequency);
+    sirenOsc.start(); lfo.start(); sirenOsc.lfo = lfo; 
 }
-
 function stopSirenSound() {
-    if (sirenOsc) {
-        try {
-            sirenOsc.stop();
-            if (sirenOsc.lfo) sirenOsc.lfo.stop();
-        } catch(e) {}
-        sirenOsc = null;
-    }
+    if (sirenOsc) { try { sirenOsc.stop(); if(sirenOsc.lfo) sirenOsc.lfo.stop(); } catch(e) {} sirenOsc = null; }
 }
 
-
-// ===========================
-// 유틸 (일반 비프)
-// ===========================
+// 유틸
 function playBeep() {
     if (!audioCtx) return;
     if (audioCtx.state === 'suspended') audioCtx.resume();
