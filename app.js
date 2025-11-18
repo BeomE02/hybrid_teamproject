@@ -2,6 +2,8 @@
 // 전역 변수
 // ===========================
 let currentMode = 'level';
+let levelDisplayMode = 'surface'; // 'surface'(원형) or 'bar'(막대)
+
 let calibration = { x: 0, y: 0 };
 let rawSensor = { x: 0, y: 0 };
 let measureState = 0; 
@@ -56,7 +58,7 @@ function playBeep() {
 }
 
 // ===========================
-// 2. 수평계 기능 (평면/수직 자동 전환)
+// 2. 수평계 기능 (수동 모드 + 회전)
 // ===========================
 function toggleTiltAlarm() {
     isTiltAlarmOn = !isTiltAlarmOn;
@@ -73,39 +75,45 @@ function toggleTiltAlarm() {
     }
 }
 
+// [신규] 모드 변경 함수
+function setLevelMode(mode) {
+    levelDisplayMode = mode;
+    
+    // 탭 스타일 변경
+    document.getElementById('btnModeSurface').classList.remove('active');
+    document.getElementById('btnModeBar').classList.remove('active');
+    
+    if (mode === 'surface') {
+        document.getElementById('btnModeSurface').classList.add('active');
+        document.getElementById('surfaceLevel').classList.add('active');
+        document.getElementById('barLevelContainer').classList.remove('active');
+        document.getElementById('levelModeText').textContent = "평면 모드 (X/Y축)";
+    } else {
+        document.getElementById('btnModeBar').classList.add('active');
+        document.getElementById('surfaceLevel').classList.remove('active');
+        document.getElementById('barLevelContainer').classList.add('active');
+        document.getElementById('levelModeText').textContent = "막대형 모드";
+    }
+}
+
 function handleMotion(event) {
     if (currentMode !== 'level') return;
     
     let acc = event.accelerationIncludingGravity;
     if (!acc) return;
 
-    let x = acc.x; let y = acc.y; let z = acc.z;
+    let x = acc.x; let y = acc.y;
 
-    // 기종 보정
     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) { x = -x; y = -y; }
 
-    // 원본 저장 (0점 보정용)
     rawSensor.x = x; rawSensor.y = y;
-
-    // 보정 적용
     x -= calibration.x; y -= calibration.y;
 
-    // [모드 판별] Z축 중력이 8보다 작으면 '폰이 서 있다'고 판단
-    const isStanding = Math.abs(z) < 8.0;
-    
-    const surfaceUI = document.getElementById('surfaceLevel');
-    const barUI = document.getElementById('barLevel');
-    const textUI = document.getElementById('levelModeText');
-    
     let isLevel = false;
     let displayAngle = 0;
 
-    if (!isStanding) {
-        // [모드 1] 평면 수평계 (기존 원형)
-        surfaceUI.classList.add('active');
-        barUI.classList.remove('active');
-        textUI.textContent = "평면 모드 (X/Y축)";
-
+    if (levelDisplayMode === 'surface') {
+        // 1. 원형 (평면)
         const limit = 100;
         let moveX = x * 10; let moveY = y * -10;
         const dist = Math.sqrt(moveX*moveX + moveY*moveY);
@@ -119,31 +127,39 @@ function handleMotion(event) {
         } else {
             bubble.classList.remove('green'); isLevel = false;
         }
-        displayAngle = Math.sqrt(x*x+y*y)*5; // 대략적 각도
-    } else {
-        // [모드 2] 수직/수평 수평계 (신규 막대형)
-        surfaceUI.classList.remove('active');
-        barUI.classList.add('active');
-        
-        // 가로/세로 중 더 많이 기울어진 쪽을 기준으로 함
-        let tilt = 0;
-        if (Math.abs(x) > Math.abs(y)) {
-            textUI.textContent = "수직 모드 (세로)";
-            tilt = y * 5; // 세로로 섰을 때 좌우 기울기
-        } else {
-            textUI.textContent = "수평 모드 (가로)";
-            tilt = x * 5; // 가로로 누웠을 때 기울기
-        }
+        displayAngle = Math.sqrt(x*x+y*y)*5;
 
-        // 막대 물방울 이동 (최대 130px 이동)
+    } else {
+        // 2. 막대형 (수직/수평)
+        const barWrap = document.getElementById('barLevel');
+        const barBubble = document.getElementById('barBubble');
+        
+        // X축(가로)과 Y축(세로) 중 더 기울어진 쪽을 기준으로 표시
+        let tilt = 0;
+        let isVertical = false;
+
+        if (Math.abs(x) > Math.abs(y)) {
+            // X축 기울기가 더 큼 -> 가로 모드
+            tilt = x * 5; 
+            barWrap.classList.remove('vertical'); // 가로 배치
+        } else {
+            // Y축 기울기가 더 큼 -> 세로 모드 (90도 회전)
+            tilt = y * 5; 
+            barWrap.classList.add('vertical'); // 세로 배치
+            isVertical = true;
+        }
+        
+        // 물방울 이동
         let barMove = tilt * 5; 
         if (barMove > 120) barMove = 120;
         if (barMove < -120) barMove = -120;
+        
+        // 세로 모드일 때 방향 보정 (물방울 움직임 자연스럽게)
+        if (isVertical) barMove = -barMove;
 
-        const barBubble = document.getElementById('barBubble');
-        barBubble.style.left = `calc(50% + ${barMove}px)`; // CSS left로 이동
+        barBubble.style.left = `calc(50% + ${barMove}px)`;
 
-        // 수평 판정 (오차 1도 이내)
+        // 수평 판정 (1도 이내)
         if (Math.abs(tilt) < 1.0) {
             barBubble.classList.add('green'); isLevel = true;
         } else {
@@ -152,11 +168,10 @@ function handleMotion(event) {
         displayAngle = Math.abs(tilt);
     }
 
-    // 각도 표시 & 배경색 복구
     document.getElementById('tiltAngle').textContent = Math.min(displayAngle, 90).toFixed(1) + '°';
     if(isLevel && isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e';
 
-    // 경고 알림 (공통)
+    // 경고 알림
     if (isTiltAlarmOn && !isLevel) {
         const now = Date.now();
         if (now - lastAlertTime > 400) {
