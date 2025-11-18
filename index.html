@@ -17,27 +17,23 @@
         .screen { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; overflow: hidden; width: 100%; }
         .active-screen { display: flex; }
 
-        /* 하단 탭 메뉴 */
+        /* 하단 탭 */
         .tab-menu { display: flex; background: #16213e; height: 60px; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); height: calc(60px + env(safe-area-inset-bottom)); z-index: 100; }
         .tab { flex: 1; text-align: center; border: none; background: transparent; color: #8d93ab; font-size: 16px; font-weight: bold; cursor: pointer; padding-bottom: env(safe-area-inset-bottom); height: 60px; display: flex; align-items: center; justify-content: center; }
         .tab.active { background: #0f3460; color: #e94560; border-top: 3px solid #e94560; }
 
-        /* [수정] 3단계 모드 선택 버튼 */
-        .level-mode-tabs {
-            display: flex; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 4px; margin-bottom: 30px; gap: 2px;
-        }
-        .mode-tab {
-            padding: 10px 15px; border: none; background: transparent; color: #aaa; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 16px; transition: all 0.2s;
-        }
+        /* 상단 탭 (모드 선택) */
+        .level-mode-tabs { display: flex; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 4px; margin-bottom: 30px; gap: 2px; }
+        .mode-tab { padding: 10px 15px; border: none; background: transparent; color: #aaa; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 16px; transition: all 0.2s; }
         .mode-tab.active { background: #e94560; color: white; box-shadow: 0 2px 10px rgba(233, 69, 96, 0.4); }
 
-        /* 알림 버튼 */
+        /* 버튼 공통 */
         .vibrate-toggle { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #aaa; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; z-index: 50; transition: all 0.3s; display: flex; align-items: center; gap: 5px; }
         .vibrate-toggle.on { background: rgba(233, 69, 96, 0.2); border-color: #e94560; color: #e94560; box-shadow: 0 0 10px rgba(233, 69, 96, 0.3); animation: pulse-border 2s infinite; }
         @keyframes pulse-border { 0% { border-color: #e94560; } 50% { border-color: transparent; } 100% { border-color: #e94560; } }
         .action-btn { background: #0f3460; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: bold; margin: 5px; cursor: pointer;}
 
-        /* 1. 원형 수평계 */
+        /* 수평계 UI */
         .level-wrap { position: relative; width: min(260px, 70vw); height: min(260px, 70vw); display: none; }
         .level-wrap.active { display: block; }
         .level-outer { width: 100%; height: 100%; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
@@ -45,33 +41,20 @@
         #bubble { width: 40px; height: 40px; background: #e94560; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: transform 0.1s linear; z-index: 1; box-shadow: 0 0 15px #e94560; }
         #bubble.green { background: #4CAF50; box-shadow: 0 0 20px #4CAF50; }
 
-        /* 2. 막대형 수평계 (컨테이너) */
+        /* 막대형 수평계 */
         .bar-level-container { display: none; width: 300px; height: 300px; position: relative; align-items: center; justify-content: center; }
         .bar-level-container.active { display: flex; }
-        
-        /* 막대 본체 */
-        .bar-level-wrap { 
-            position: relative; 
-            width: 280px; height: 60px; 
-            background: rgba(255,255,255,0.1); 
-            border-radius: 30px; 
-            border: 2px solid rgba(255,255,255,0.3);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), width 0.3s, height 0.3s;
-        }
-        
-        /* [중요] 세로 모드일 때 CSS로 회전 */
-        .bar-level-wrap.vertical-mode { 
-            transform: rotate(-90deg); 
-        }
-
+        .bar-level-wrap { position: relative; width: 280px; height: 60px; background: rgba(255,255,255,0.1); border-radius: 30px; border: 2px solid rgba(255,255,255,0.3); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .bar-level-wrap.vertical-mode { transform: rotate(-90deg); }
         .bar-center-lines { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 40px; height: 100%; border-left: 2px solid rgba(255,255,255,0.5); border-right: 2px solid rgba(255,255,255,0.5); z-index: 2; }
         #barBubble { position: absolute; top: 5px; left: 50%; transform: translateX(-50%); width: 50px; height: 46px; border-radius: 23px; background: #e94560; box-shadow: 0 0 15px #e94560; transition: left 0.1s linear, background-color 0.2s; z-index: 1; }
         #barBubble.green { background: #4CAF50; box-shadow: 0 0 20px #4CAF50; }
-
         .angle-text { font-size: 40px; font-weight: bold; margin-top: 30px; font-variant-numeric: tabular-nums; }
         .angle-sub { font-size: 16px; color: #aaa; margin-top: 10px; }
 
-        /* 기타 UI 유지 */
+        /* =========================== */
+        /* 나침반 UI (GPS 기능 추가) */
+        /* =========================== */
         .compass-container { position: relative; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle at center, #2a2a40 0%, #16213e 100%); box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.5), 0 0 0 5px rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
         .compass-dial { width: 100%; height: 100%; position: absolute; border-radius: 50%; }
         .tick { position: absolute; left: 50%; top: 0; width: 2px; height: 15px; background: #555; transform-origin: center 150px; }
@@ -86,6 +69,40 @@
         .compass-stats { margin-top: 40px; text-align: center; }
         .compass-value { font-size: 60px; font-weight: bold; font-variant-numeric: tabular-nums; letter-spacing: -2px; }
         .direction-text { font-size: 24px; color: #e94560; font-weight: bold; margin-top: 5px; }
+
+        /* [신규] 목표 지점 화살표 (초록색) */
+        .target-arrow-wrap {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; /* 타겟 설정 시 보임 */
+        }
+        .target-arrow {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            width: 0; height: 0; 
+            border-left: 10px solid transparent; 
+            border-right: 10px solid transparent; 
+            border-top: 20px solid #4CAF50; /* 초록색 */
+            filter: drop-shadow(0 0 5px #4CAF50);
+        }
+        
+        /* [신규] GPS 거리 정보 패널 */
+        .gps-panel {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            width: 90%; text-align: center;
+        }
+        .gps-btn {
+            background: rgba(76, 175, 80, 0.2); border: 1px solid #4CAF50; color: #4CAF50;
+            padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 5px; margin: 0 auto;
+        }
+        .gps-info {
+            display: none; background: rgba(0,0,0,0.6); border-radius: 15px; padding: 10px; margin-top: 10px;
+            border: 1px solid #555;
+        }
+        .gps-dist { font-size: 24px; font-weight: bold; color: #4CAF50; }
+        .gps-sub { font-size: 12px; color: #aaa; margin-top: 3px; }
+        .gps-clear { background: none; border: none; color: #888; font-size: 12px; text-decoration: underline; margin-top: 5px; cursor: pointer; }
+
+        /* 기타 UI */
         .camera-btn { background: #0f3460; border: 2px solid #e94560; color: white; padding: 20px; width: 100%; border-radius: 15px; margin-bottom: 15px; text-align: left; display: flex; align-items: center; }
         .camera-btn i { font-size: 24px; margin-right: 15px; }
         .camera-btn div { display: flex; flex-direction: column; }
@@ -104,7 +121,7 @@
 <body>
     <div id="startOverlay">
         <h1 style="font-size: 24px; margin-bottom: 20px;">⚠️ 시작하기</h1>
-        <p style="color: #ccc;">센서 권한을 허용해야<br>정상 작동합니다.</p>
+        <p style="color: #ccc;">센서 및 위치 권한을 허용해야<br>모든 기능이 작동합니다.</p>
         <button class="big-start-btn" onclick="requestPermissions()">앱 시작하기</button>
     </div>
 
@@ -115,7 +132,6 @@
             <button id="tiltAlarmBtn" class="vibrate-toggle" onclick="toggleTiltAlarm()">🔕 알림 꺼짐</button>
 
             <h2 style="margin-bottom: 20px;">수평계</h2>
-            
             <div class="level-mode-tabs">
                 <button class="mode-tab active" id="btnModeSurface" onclick="setLevelMode('surface')">원형</button>
                 <button class="mode-tab" id="btnModeBarH" onclick="setLevelMode('bar_h')">가로 막대</button>
@@ -137,7 +153,6 @@
 
             <div class="angle-text" id="tiltAngle">0.0°</div>
             <div class="angle-sub" id="levelModeText">평면 모드 (X/Y축)</div>
-            
             <button class="action-btn" onclick="calibrateLevel()" style="margin-top: 20px;">0점 조절</button>
         </div>
 
@@ -168,11 +183,30 @@
         </div>
 
         <div id="angleScreen" class="screen">
+            <div class="gps-panel">
+                <button id="btnSaveLoc" class="gps-btn" onclick="saveCurrentLocation()">
+                    📍 현재 위치를 타겟으로 기억
+                </button>
+                
+                <div id="gpsInfo" class="gps-info">
+                    <div style="color:#fff; font-size:14px;">타겟까지 거리</div>
+                    <div id="gpsDist" class="gps-dist">0 m</div>
+                    <div class="gps-sub">초록색 화살표가 타겟 방향입니다</div>
+                    <button class="gps-clear" onclick="clearLocation()">위치 초기화</button>
+                </div>
+            </div>
+
             <div class="fixed-arrow"></div>
+
             <div class="compass-container" id="compassContainer">
-                <div class="compass-dial" id="compassDial"></div>
+                <div class="compass-dial" id="compassDial">
+                    <div id="targetArrow" class="target-arrow-wrap">
+                        <div class="target-arrow"></div>
+                    </div>
+                </div>
                 <div class="crosshair"></div>
             </div>
+            
             <div class="compass-stats">
                 <div class="compass-value" id="compassValue">0°</div>
                 <div class="direction-text" id="directionText">N</div>
