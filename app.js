@@ -2,23 +2,15 @@
 // 전역 변수
 // ===========================
 let currentMode = 'level';
-
-// 보정값
 let calibration = { x: 0, y: 0 };
 let rawSensor = { x: 0, y: 0 };
-
-// 측정 관련
 let measureState = 0; 
 let measureRefType = 'card'; 
 let pixelsPerMM = 0; 
 let refLine = null; 
 let targetLine = null;
-
-// 알림 설정
 let isTiltAlarmOn = false;
 let lastAlertTime = 0;
-
-// 오디오 컨텍스트
 let audioCtx = null;
 
 const REF_SIZE = { card: 85.60, coin: 26.50 };
@@ -27,15 +19,10 @@ const REF_SIZE = { card: 85.60, coin: 26.50 };
 // 1. 초기화
 // ===========================
 function requestPermissions() {
-    // 오디오 준비
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
         alert("⚠️ 보안 연결(HTTPS)이 필요합니다.");
     }
-    
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(res => {
@@ -58,50 +45,30 @@ function startSensors() {
     document.getElementById('cameraInput').addEventListener('change', handleImageUpload);
 }
 
-// ===========================
-// 소리 재생 함수 (비프음)
-// ===========================
 function playBeep() {
     if (!audioCtx) return;
     if (audioCtx.state === 'suspended') audioCtx.resume();
-
     const osc = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
-
-    osc.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-
-    osc.type = 'sine'; 
-    osc.frequency.value = 600; // 약간 낮은 톤으로 변경 (더 잘 들림)
-    gainNode.gain.value = 0.1; 
-
-    osc.start();
-    setTimeout(() => { osc.stop(); }, 100);
+    osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+    osc.type = 'sine'; osc.frequency.value = 600; gainNode.gain.value = 0.1; 
+    osc.start(); setTimeout(() => { osc.stop(); }, 100);
 }
 
 // ===========================
-// 2. 수평계 기능 (진동 + 화면 깜빡임)
+// 2. 수평계 기능 (평면/수직 자동 전환)
 // ===========================
 function toggleTiltAlarm() {
     isTiltAlarmOn = !isTiltAlarmOn;
     const btn = document.getElementById('tiltAlarmBtn');
-    
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
     if (isTiltAlarmOn) {
-        btn.textContent = "⚠️ 알림 켜짐";
-        btn.classList.add('on');
-        
-        // [테스트] 버튼 누르는 순간 강제 진동 (작동 확인용)
-        // 안드로이드는 배열([200])을 더 잘 인식함
-        if(navigator.vibrate) navigator.vibrate([200]); 
-        playBeep();
-        
+        btn.textContent = "⚠️ 알림 켜짐"; btn.classList.add('on');
+        if(navigator.vibrate) navigator.vibrate([200]); playBeep();
     } else {
-        btn.textContent = "🔕 알림 꺼짐";
-        btn.classList.remove('on');
-        // 끄면 화면 색상 복구
+        btn.textContent = "🔕 알림 꺼짐"; btn.classList.remove('on');
         document.body.style.backgroundColor = '#1a1a2e';
     }
 }
@@ -112,54 +79,91 @@ function handleMotion(event) {
     let acc = event.accelerationIncludingGravity;
     if (!acc) return;
 
-    let x = acc.x; let y = acc.y;
+    let x = acc.x; let y = acc.y; let z = acc.z;
 
+    // 기종 보정
     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) { x = -x; y = -y; }
 
+    // 원본 저장 (0점 보정용)
     rawSensor.x = x; rawSensor.y = y;
+
+    // 보정 적용
     x -= calibration.x; y -= calibration.y;
 
-    const limit = 100;
-    let moveX = x * 10; let moveY = y * -10;
-    const dist = Math.sqrt(moveX*moveX + moveY*moveY);
-    if (dist > limit) { moveX = (moveX/dist)*limit; moveY = (moveY/dist)*limit; }
+    // [모드 판별] Z축 중력이 8보다 작으면 '폰이 서 있다'고 판단
+    const isStanding = Math.abs(z) < 8.0;
     
-    const bubble = document.getElementById('bubble');
+    const surfaceUI = document.getElementById('surfaceLevel');
+    const barUI = document.getElementById('barLevel');
+    const textUI = document.getElementById('levelModeText');
+    
     let isLevel = false;
+    let displayAngle = 0;
 
-    if(bubble) {
+    if (!isStanding) {
+        // [모드 1] 평면 수평계 (기존 원형)
+        surfaceUI.classList.add('active');
+        barUI.classList.remove('active');
+        textUI.textContent = "평면 모드 (X/Y축)";
+
+        const limit = 100;
+        let moveX = x * 10; let moveY = y * -10;
+        const dist = Math.sqrt(moveX*moveX + moveY*moveY);
+        if (dist > limit) { moveX = (moveX/dist)*limit; moveY = (moveY/dist)*limit; }
+
+        const bubble = document.getElementById('bubble');
         bubble.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
-        if(Math.abs(x) < 0.5 && Math.abs(y) < 0.5) {
-            bubble.classList.add('green');
-            isLevel = true;
-            // 수평 맞으면 배경색 정상 복구
-            if(isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e';
-        } else {
-            bubble.classList.remove('green');
-            isLevel = false;
-        }
-    }
-    document.getElementById('tiltAngle').textContent = Math.min(Math.sqrt(x*x+y*y)*5, 90).toFixed(1) + '°';
 
-    // [핵심 수정] 경고 알림 (진동 + 소리 + 화면 깜빡임)
+        if(Math.abs(x) < 0.5 && Math.abs(y) < 0.5) {
+            bubble.classList.add('green'); isLevel = true;
+        } else {
+            bubble.classList.remove('green'); isLevel = false;
+        }
+        displayAngle = Math.sqrt(x*x+y*y)*5; // 대략적 각도
+    } else {
+        // [모드 2] 수직/수평 수평계 (신규 막대형)
+        surfaceUI.classList.remove('active');
+        barUI.classList.add('active');
+        
+        // 가로/세로 중 더 많이 기울어진 쪽을 기준으로 함
+        let tilt = 0;
+        if (Math.abs(x) > Math.abs(y)) {
+            textUI.textContent = "수직 모드 (세로)";
+            tilt = y * 5; // 세로로 섰을 때 좌우 기울기
+        } else {
+            textUI.textContent = "수평 모드 (가로)";
+            tilt = x * 5; // 가로로 누웠을 때 기울기
+        }
+
+        // 막대 물방울 이동 (최대 130px 이동)
+        let barMove = tilt * 5; 
+        if (barMove > 120) barMove = 120;
+        if (barMove < -120) barMove = -120;
+
+        const barBubble = document.getElementById('barBubble');
+        barBubble.style.left = `calc(50% + ${barMove}px)`; // CSS left로 이동
+
+        // 수평 판정 (오차 1도 이내)
+        if (Math.abs(tilt) < 1.0) {
+            barBubble.classList.add('green'); isLevel = true;
+        } else {
+            barBubble.classList.remove('green'); isLevel = false;
+        }
+        displayAngle = Math.abs(tilt);
+    }
+
+    // 각도 표시 & 배경색 복구
+    document.getElementById('tiltAngle').textContent = Math.min(displayAngle, 90).toFixed(1) + '°';
+    if(isLevel && isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e';
+
+    // 경고 알림 (공통)
     if (isTiltAlarmOn && !isLevel) {
         const now = Date.now();
-        // 0.4초 간격으로 알림
         if (now - lastAlertTime > 400) {
-            
-            // 1. 진동 (배열 패턴 사용: [진동시간])
             if(navigator.vibrate) navigator.vibrate([100]);
-            
-            // 2. 소리
             playBeep();
-            
-            // 3. [추가] 화면 깜빡임 (붉은색) - 진동이 안 느껴져도 눈으로 확인 가능
-            document.body.style.backgroundColor = '#4a1a1a'; // 어두운 빨강
-            setTimeout(() => {
-                // 0.1초 뒤에 원래 색으로 복귀 시도 (깜빡임 효과)
-                if(isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e';
-            }, 100);
-
+            document.body.style.backgroundColor = '#4a1a1a'; 
+            setTimeout(() => { if(isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e'; }, 100);
             lastAlertTime = now;
         }
     }
@@ -168,7 +172,7 @@ function handleMotion(event) {
 function calibrateLevel() {
     calibration.x = rawSensor.x;
     calibration.y = rawSensor.y;
-    alert('현재 기울기를 0점으로 설정했습니다.');
+    alert('현재 상태를 0점으로 설정했습니다.');
 }
 
 // ===========================
@@ -212,7 +216,6 @@ function drawCompassTicks() {
         }
     }
 }
-
 function handleOrientation(event) {
     if (currentMode !== 'angle') return;
     let h = event.webkitCompassHeading || (event.alpha ? 360 - event.alpha : 0);
@@ -221,8 +224,7 @@ function handleOrientation(event) {
     dial.style.transform = `rotate(${-h}deg)`;
     document.getElementById('compassValue').textContent = h + '°';
     const dirs = ['N','NE','E','SE','S','SW','W','NW'];
-    const dirText = dirs[Math.round(h/45)%8];
-    document.getElementById('directionText').textContent = dirText;
+    document.getElementById('directionText').textContent = dirs[Math.round(h/45)%8];
 }
 
 // ===========================
