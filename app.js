@@ -17,20 +17,21 @@ let isTiltAlarmOn = false;
 let lastAlertTime = 0;
 let audioCtx = null;
 
+// GPS
 let myLat = 0, myLng = 0;
 let targetLat = null, targetLng = null;
 let watchId = null;
 let map = null;
 let mapMarker = null;
 
-// SOS
+// [SOS 관련]
 let flashStream = null;
-let isFlashOn = false;
-let isSirenOn = false;
-let isSOSOn = false;
 let sirenOsc = null;
-let sirenGain = null;
+let sirenInterval = null;
 let sosInterval = null;
+let emergencyMode = null; // 'flash', 'siren', 'sos'
+let tapCount = 0;
+let tapTimer = null;
 
 const REF_SIZE = { card: 85.60, coin: 26.50 };
 
@@ -54,6 +55,11 @@ function requestPermissions() {
     } else { 
         startAppSystem(); 
     }
+    
+    // 비상 정지용 3연타 리스너
+    const overlay = document.getElementById('emergencyOverlay');
+    overlay.addEventListener('touchstart', handleEmergencyTap);
+    overlay.addEventListener('click', handleEmergencyTap);
 }
 
 function startAppSystem() {
@@ -81,9 +87,7 @@ function startGPS() {
             (pos) => {
                 const { latitude, longitude, speed } = pos.coords;
                 myLat = latitude; myLng = longitude;
-                updateGPSUI();
-                updateSpeedometer(speed);
-                updateMapMarker(latitude, longitude);
+                updateGPSUI(); updateSpeedometer(speed); updateMapMarker(latitude, longitude);
             },
             (err) => console.log("GPS Error"),
             { enableHighAccuracy: true, maximumAge: 0, timeout: 1000 }
@@ -92,94 +96,166 @@ function startGPS() {
 }
 
 // ===========================
-// SOS & 사이렌 (아이콘 적용)
+// [핵심] 비상 기능 (플래시/사이렌/SOS)
 // ===========================
-async function toggleFlashlight() {
-    if(isSOSOn) toggleSOS(); 
-    isFlashOn = !isFlashOn;
-    updateFlashState(isFlashOn);
-    const btn = document.getElementById('btnFlash');
-    if(isFlashOn) btn.classList.add('active');
-    else btn.classList.remove('active');
+
+async function triggerEmergency(mode) {
+    // 오디오 컨텍스트 깨우기
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+
+    // 기존 모드가 켜져있으면 끔 (토글 아님, 재시작)
+    emergencyStop();
+    
+    emergencyMode = mode;
+    const overlay = document.getElementById('emergencyOverlay');
+    overlay.classList.add('active'); // 전체 화면 덮기
+    
+    if (mode === 'flash') {
+        // 1. 손전등 모드 (하드웨어 Torch + 화면 흰색)
+        await setHardwareFlash(true);
+        overlay.style.backgroundColor = 'white';
+    } 
+    else if (mode === 'siren') {
+        // 2. 사이렌 모드 (소리 + 하드웨어 깜빡임 + 화면 빨강/파랑)
+        startSirenSound();
+        let toggle = false;
+        sirenInterval = setInterval(() => {
+            toggle = !toggle;
+            // 화면 색상
+            overlay.style.backgroundColor = toggle ? '#ff0000' : '#0000ff';
+            // 하드웨어 플래시도 같이 깜빡임
+            setHardwareFlash(toggle);
+        }, 300); // 0.3초 간격
+    } 
+    else if (mode === 'sos') {
+        // 3. SOS 모드 (모스 부호 대신 강력한 점멸)
+        // 하늘에 보내는 신호이므로 하드웨어 플래시 중요
+        startSirenSound(true); // SOS는 비프음
+        let toggle = false;
+        sosInterval = setInterval(() => {
+            toggle = !toggle;
+            overlay.style.backgroundColor = toggle ? 'white' : 'black';
+            setHardwareFlash(toggle);
+        }, 500); // 0.5초 간격
+    }
 }
 
-async function updateFlashState(on) {
+// 3연타 감지 및 정지
+function handleEmergencyTap(e) {
+    e.preventDefault(); // 줌 방지
+    tapCount++;
+    
+    if (tapTimer) clearTimeout(tapTimer);
+    
+    // 0.4초 안에 다음 터치가 없으면 카운트 리셋
+    tapTimer = setTimeout(() => { tapCount = 0; }, 400);
+    
+    if (tapCount >= 3) {
+        emergencyStop();
+        tapCount = 0;
+    }
+}
+
+function emergencyStop() {
+    // 모든 타이머/소리/플래시/오버레이 정지
+    if (sirenInterval) clearInterval(sirenInterval);
+    if (sosInterval) clearInterval(sosInterval);
+    
+    stopSirenSound();
+    setHardwareFlash(false);
+    
+    const overlay = document.getElementById('emergencyOverlay');
+    overlay.classList.remove('active');
+    overlay.style.backgroundColor = 'black'; // 리셋
+    
+    emergencyMode = null;
+}
+
+// 하드웨어 플래시 제어 (안드로이드 크롬 등)
+async function setHardwareFlash(on) {
     try {
         if (on) {
             if (!flashStream) {
-                flashStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                flashStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
             }
             const track = flashStream.getVideoTracks()[0];
             const capabilities = track.getCapabilities();
-            if (capabilities.torch) await track.applyConstraints({ advanced: [{ torch: true }] });
+            if (capabilities.torch) {
+                await track.applyConstraints({ advanced: [{ torch: true }] });
+            }
         } else {
             if (flashStream) {
                 const track = flashStream.getVideoTracks()[0];
-                await track.applyConstraints({ advanced: [{ torch: false }] });
-                track.stop(); flashStream = null;
+                const capabilities = track.getCapabilities();
+                // 끄기 시도
+                if(capabilities.torch) {
+                   await track.applyConstraints({ advanced: [{ torch: false }] });
+                }
+                // 스트림 완전히 닫기
+                track.stop();
+                flashStream = null;
             }
         }
-    } catch (e) { console.log("Flash Error:", e); }
-    const overlay = document.getElementById('screenFlashOverlay');
-    if (on) overlay.classList.add('active'); else overlay.classList.remove('active');
-}
-
-function toggleSiren() {
-    isSirenOn = !isSirenOn;
-    const btn = document.getElementById('btnSiren');
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-
-    if (isSirenOn) {
-        btn.classList.add('active');
-        // [수정] 아이콘 포함 텍스트 변경
-        btn.innerHTML = '<span class="material-symbols-rounded">volume_off</span> 사이렌 끄기';
-        startSirenSound();
-    } else {
-        btn.classList.remove('active');
-        btn.innerHTML = '<span class="material-symbols-rounded">volume_up</span> 사이렌';
-        stopSirenSound();
+    } catch (e) {
+        console.log("Flash control failed:", e);
     }
 }
 
-function startSirenSound() {
+// 사이렌 소리 생성
+function startSirenSound(isBeep = false) {
     if (sirenOsc) stopSirenSound();
+    
     sirenOsc = audioCtx.createOscillator();
-    sirenGain = audioCtx.createGain();
-    sirenOsc.type = 'sawtooth';
-    sirenOsc.connect(sirenGain); sirenGain.connect(audioCtx.destination);
-    const now = audioCtx.currentTime;
-    sirenOsc.frequency.setValueAtTime(600, now);
-    sirenOsc.frequency.linearRampToValueAtTime(1200, now + 0.5);
-    sirenOsc.frequency.linearRampToValueAtTime(600, now + 1.0);
-    const lfo = audioCtx.createOscillator(); lfo.type = 'triangle'; lfo.frequency.value = 1.0;
-    const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 600;
-    lfo.connect(lfoGain); lfoGain.connect(sirenOsc.frequency);
-    sirenOsc.start(); lfo.start(); sirenOsc.lfo = lfo; 
-}
-function stopSirenSound() {
-    if (sirenOsc) { try { sirenOsc.stop(); if(sirenOsc.lfo) sirenOsc.lfo.stop(); } catch(e) {} sirenOsc = null; }
+    const gain = audioCtx.createGain();
+    sirenOsc.connect(gain);
+    gain.connect(audioCtx.destination);
+    
+    if (isBeep) {
+        // SOS 비프음
+        sirenOsc.type = 'square';
+        sirenOsc.frequency.value = 880;
+        // SOS 리듬 (간단히 on/off는 interval에서 처리하되 소리는 계속 나게 하거나 끊거나)
+        // 여기선 계속 울리게 하고 톤만 유지
+    } else {
+        // 경찰 사이렌 (Wail)
+        sirenOsc.type = 'sawtooth';
+        const now = audioCtx.currentTime;
+        sirenOsc.frequency.setValueAtTime(600, now);
+        sirenOsc.frequency.linearRampToValueAtTime(1200, now + 0.5);
+        sirenOsc.frequency.linearRampToValueAtTime(600, now + 1.0);
+        
+        // 루프 LFO
+        const lfo = audioCtx.createOscillator();
+        lfo.type = 'triangle';
+        lfo.frequency.value = 1.0; 
+        const lfoGain = audioCtx.createGain();
+        lfoGain.gain.value = 600;
+        lfo.connect(lfoGain);
+        lfoGain.connect(sirenOsc.frequency);
+        lfo.start();
+        sirenOsc.lfo = lfo;
+    }
+    
+    gain.gain.value = 1.0; // 최대 볼륨
+    sirenOsc.start();
 }
 
-function toggleSOS() {
-    if(isFlashOn) toggleFlashlight();
-    if(isSirenOn) toggleSiren();
-    isSOSOn = !isSOSOn;
-    const btn = document.getElementById('btnSOS');
-    if (isSOSOn) {
-        btn.classList.add('active');
-        btn.innerHTML = '<span class="material-symbols-rounded">stop_circle</span> SOS 정지';
-        let toggle = false;
-        sosInterval = setInterval(() => { toggle = !toggle; updateFlashState(toggle); }, 300);
-    } else {
-        btn.classList.remove('active');
-        btn.innerHTML = '<span class="material-symbols-rounded">sos</span> 구조신호<br><span style="font-size:14px; font-weight:normal;">(자동 깜빡임)</span>';
-        clearInterval(sosInterval); updateFlashState(false);
+function stopSirenSound() {
+    if (sirenOsc) {
+        try {
+            sirenOsc.stop();
+            if (sirenOsc.lfo) sirenOsc.lfo.stop();
+        } catch(e) {}
+        sirenOsc = null;
     }
 }
+
 
 // ===========================
-// 유틸
+// 유틸 (일반 비프)
 // ===========================
 function playBeep() {
     if (!audioCtx) return;
@@ -216,7 +292,7 @@ function updateMapMarker(lat, lng) {
 }
 
 // ===========================
-// 3. 수평계 (아이콘 적용)
+// 3. 수평계
 // ===========================
 function toggleTiltAlarm() {
     isTiltAlarmOn = !isTiltAlarmOn;
@@ -224,7 +300,6 @@ function toggleTiltAlarm() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
     if (isTiltAlarmOn) {
-        // [수정] 아이콘 포함 텍스트 변경
         btn.innerHTML = '<span class="material-symbols-rounded">notifications_active</span> 알림 켜짐';
         btn.classList.add('on');
         if(navigator.vibrate) navigator.vibrate([200]); playBeep();
@@ -240,12 +315,10 @@ function setLevelMode(mode) {
     document.getElementById('btnModeSurface').classList.remove('active');
     document.getElementById('btnModeBarH').classList.remove('active');
     document.getElementById('btnModeBarV').classList.remove('active');
-    
     const surfaceUI = document.getElementById('surfaceLevel');
     const barUI = document.getElementById('barLevelContainer');
     const barWrap = document.getElementById('barLevel');
     const textUI = document.getElementById('levelModeText');
-    
     if (mode === 'surface') {
         document.getElementById('btnModeSurface').classList.add('active');
         surfaceUI.classList.add('active'); barUI.classList.remove('active');
@@ -298,7 +371,7 @@ function handleMotion(event) {
 function calibrateLevel() { calibration.x = rawSensor.x; calibration.y = rawSensor.y; alert('0점 설정 완료'); }
 
 // ===========================
-// 4. 나침반
+// 4. 나침반 + GPS
 // ===========================
 function saveCurrentLocation() {
     if (myLat === 0 && myLng === 0) { alert("GPS 신호를 기다리는 중입니다..."); return; }
