@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1, viewport-fit=cover">
     <title>스마트 측정 도구</title>
     
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" />
 
     <style>
         /* 기본 설정 */
@@ -23,59 +24,21 @@
         .screen { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; overflow: hidden; width: 100%; }
         .active-screen { display: flex; }
 
-        /* 하단 탭 메뉴 */
+        /* 탭 메뉴 */
         .tab-menu { display: flex; background: #16213e; height: 65px; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); height: calc(65px + env(safe-area-inset-bottom)); z-index: 1000; border-top: 1px solid rgba(255,255,255,0.05); }
         .tab { flex: 1; text-align: center; border: none; background: transparent; color: #6c757d; font-size: 11px; font-weight: 600; cursor: pointer; padding-bottom: env(safe-area-inset-bottom); height: 65px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: color 0.2s; }
         .tab span.material-symbols-rounded { font-size: 26px; margin-bottom: 2px; }
         .tab.active { color: #e94560; }
 
-        /* [수정됨] 비상 상황 오버레이 (기본: 숨김) */
-        #emergencyOverlay {
-            display: none; /* 평소엔 아예 숨김 */
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 99999;
-            background: black;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            touch-action: manipulation;
-        }
-        #emergencyOverlay.active { display: flex; } /* 켜지면 보임 */
-        
-        .emergency-text {
-            font-size: 20px; font-weight: bold; color: black; 
-            text-align: center; padding: 20px 30px;
-            background: rgba(255,255,255,0.9); border-radius: 15px;
-            pointer-events: none;
-            box-shadow: 0 0 20px rgba(255,255,255,0.2);
-        }
-
-        /* [수정됨] 화면 플래시 오버레이 (기본: 숨김) */
-        #screenFlashOverlay {
-            display: none; /* 평소엔 아예 숨김 */
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 9999; pointer-events: none;
-        }
-        #screenFlashOverlay.active { display: block; } /* 켜지면 보임 */
-
-        /* SOS 버튼들 */
-        .sos-grid { display: grid; grid-template-columns: 1fr; gap: 20px; width: 100%; max-width: 400px; z-index: 10; /* 버튼을 위로 올림 */ }
-        .sos-btn { padding: 30px; border: none; border-radius: 20px; font-size: 22px; font-weight: bold; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: all 0.2s; position: relative; }
-        .sos-btn:active { transform: scale(0.98); }
-        .sos-btn span { font-size: 36px; }
-        .btn-flash { background: #333; border: 2px solid #fff; }
-        .btn-siren { background: #b71c1c; border: 2px solid #ff5252; }
-        .btn-sos { background: #e65100; border: 2px solid #ff9800; grid-row: span 2; }
-
-        /* 공통 UI */
+        /* UI 공통 */
         .level-mode-tabs { display: flex; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 4px; margin-bottom: 30px; gap: 2px; }
         .mode-tab { padding: 10px 15px; border: none; background: transparent; color: #aaa; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 16px; transition: all 0.2s; }
         .mode-tab.active { background: #e94560; color: white; box-shadow: 0 2px 10px rgba(233, 69, 96, 0.4); }
         .vibrate-toggle { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #aaa; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; z-index: 50; transition: all 0.3s; display: flex; align-items: center; gap: 6px; }
         .vibrate-toggle.on { background: rgba(233, 69, 96, 0.2); border-color: #e94560; color: #e94560; box-shadow: 0 0 10px rgba(233, 69, 96, 0.3); animation: pulse-border 2s infinite; }
         .action-btn { background: #0f3460; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: bold; margin: 5px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        
-        /* 수평계 UI */
+
+        /* 수평계 */
         .level-wrap { position: relative; width: min(260px, 70vw); height: min(260px, 70vw); display: none; }
         .level-wrap.active { display: block; }
         .level-outer { width: 100%; height: 100%; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
@@ -92,7 +55,7 @@
         .angle-text { font-size: 40px; font-weight: bold; margin-top: 30px; font-variant-numeric: tabular-nums; }
         .angle-sub { font-size: 16px; color: #aaa; margin-top: 10px; }
 
-        /* 측정 UI */
+        /* 측정 */
         .camera-btn { background: #0f3460; border: 2px solid #e94560; color: white; padding: 20px; width: 100%; border-radius: 15px; margin-bottom: 15px; text-align: left; display: flex; align-items: center; }
         .camera-btn .material-symbols-rounded { font-size: 32px; margin-right: 15px; color: #e94560; }
         .camera-btn div { display: flex; flex-direction: column; }
@@ -104,8 +67,8 @@
         #stepActionBtn { background: #e94560; border: none; color: white; padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; }
         #stepResetBtn { background: #555; border: none; color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; margin-left: 10px; }
         #finalResult { display: none; position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); padding: 20px 40px; border-radius: 15px; z-index: 20; text-align: center; border: 2px solid #e94560; }
-        
-        /* 나침반 & GPS UI */
+
+        /* 나침반 & GPS */
         .compass-area-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .compass-area-wrapper.shrink { transform: scale(0.75) translateY(40px); }
         .compass-container { position: relative; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle at center, #2a2a40 0%, #16213e 100%); box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.5), 0 0 0 5px rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
@@ -130,13 +93,31 @@
         .gps-dist { font-size: 32px; font-weight: bold; color: #4CAF50; margin: 5px 0; }
         .gps-sub { font-size: 12px; color: #aaa; margin-top: 3px; }
         .gps-clear { background: none; border: none; color: #888; font-size: 12px; text-decoration: underline; margin-top: 10px; cursor: pointer; padding: 5px; }
-        #gpsScreen { padding: 0; display: none; }
-        .speedometer-wrap { width: 100%; padding: 20px; background: linear-gradient(to bottom, #16213e, rgba(22, 33, 62, 0.8)); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; box-shadow: 0 5px 20px rgba(0,0,0,0.3); }
+        
+        /* [수정] 속도계/지도 UI (높이 강제 지정) */
+        #gpsScreen { padding: 0; display: none; flex-direction: column; height: 100%; }
+        .speedometer-wrap { width: 100%; padding: 20px; background: linear-gradient(to bottom, #16213e, rgba(22, 33, 62, 0.8)); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; box-shadow: 0 5px 20px rgba(0,0,0,0.3); flex-shrink: 0; }
         .speed-value { font-size: 72px; font-weight: bold; color: #e94560; font-variant-numeric: tabular-nums; text-shadow: 0 0 20px rgba(233, 69, 96, 0.5); line-height: 1; }
         .speed-unit { font-size: 18px; color: #aaa; margin-top: 5px; font-weight: bold; }
         .coord-info { margin-top: 10px; font-size: 12px; color: #888; background: rgba(0,0,0,0.3); padding: 5px 15px; border-radius: 15px; }
-        #map { width: 100%; flex: 1; background: #222; }
+        
+        /* [수정] 지도 높이 100% */
+        #map { width: 100%; height: 100%; min-height: 50vh; background: #222; flex: 1; z-index: 1; }
         .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+
+        /* SOS UI */
+        .sos-grid { display: grid; grid-template-columns: 1fr; gap: 20px; width: 100%; max-width: 400px; z-index: 10; }
+        .sos-btn { padding: 30px; border: none; border-radius: 20px; font-size: 22px; font-weight: bold; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); transition: all 0.2s; position: relative; }
+        .sos-btn:active { transform: scale(0.98); }
+        .sos-btn span { font-size: 36px; }
+        .btn-flash { background: #333; border: 2px solid #fff; }
+        .btn-siren { background: #b71c1c; border: 2px solid #ff5252; }
+        .btn-sos { background: #e65100; border: 2px solid #ff9800; grid-row: span 2; }
+        #emergencyOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; background: black; flex-direction: column; align-items: center; justify-content: center; touch-action: manipulation; }
+        #emergencyOverlay.active { display: flex; }
+        .emergency-text { font-size: 20px; font-weight: bold; color: black; text-align: center; padding: 20px 30px; background: rgba(255,255,255,0.9); border-radius: 15px; pointer-events: none; box-shadow: 0 0 20px rgba(255,255,255,0.2); }
+        #screenFlashOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; pointer-events: none; }
+        #screenFlashOverlay.active { display: block; }
         @keyframes pulse-border { 0% { border-color: #e94560; } 50% { border-color: transparent; } 100% { border-color: #e94560; } }
         #startOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
         .big-start-btn { padding: 20px 50px; font-size: 22px; background: #e94560; color: white; border: none; border-radius: 50px; margin-top: 30px; font-weight: bold; box-shadow: 0 0 20px rgba(233, 69, 96, 0.5); }
@@ -149,9 +130,7 @@
             종료됩니다.
         </div>
     </div>
-
     <div id="screenFlashOverlay"></div>
-
     <div id="startOverlay">
         <h1 style="font-size: 24px; margin-bottom: 20px;">⚠️ 시작하기</h1>
         <p style="color: #ccc;">센서 및 위치 권한을 허용해야<br>모든 기능이 작동합니다.</p>
