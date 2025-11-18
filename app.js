@@ -17,20 +17,20 @@ let isTiltAlarmOn = false;
 let lastAlertTime = 0;
 let audioCtx = null;
 
-// GPS & 지도
 let myLat = 0, myLng = 0;
 let targetLat = null, targetLng = null;
 let watchId = null;
 let map = null;
 let mapMarker = null;
 
-// SOS
+// [SOS]
 let flashStream = null;
 let isFlashOn = false;
 let isSirenOn = false;
 let isSOSOn = false;
 let sirenOsc = null;
 let sirenGain = null;
+let sirenInterval = null;
 let sosInterval = null;
 let emergencyMode = null;
 let tapCount = 0;
@@ -52,7 +52,7 @@ function requestPermissions() {
         DeviceOrientationEvent.requestPermission()
             .then(res => {
                 if (res === 'granted') { startAppSystem(); }
-                else { alert('센서 권한이 거부되었습니다.'); hideOverlay(); }
+                else { alert('권한이 거부되었습니다.'); hideOverlay(); }
             })
             .catch(e => { alert("권한 오류: " + e); startAppSystem(); });
     } else { 
@@ -95,7 +95,6 @@ function startGPS() {
                 updateGPSUI();
                 updateSpeedometer(speed);
                 updateMapMarker(latitude, longitude);
-                
                 if(infoBox) infoBox.textContent = `위도:${latitude.toFixed(4)}, 경도:${longitude.toFixed(4)} (오차:${Math.round(accuracy)}m)`;
             },
             (err) => {
@@ -105,40 +104,6 @@ function startGPS() {
             { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
         );
     }
-}
-
-// ===========================
-// 5. 탭 전환 (지도 강제 새로고침)
-// ===========================
-function switchTab(mode, btn) {
-    currentMode = mode;
-    
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    
-    if (mode === 'level') document.getElementById('levelScreen').classList.add('active-screen');
-    if (mode === 'measure') document.getElementById('measureScreen').classList.add('active-screen');
-    if (mode === 'angle') { document.getElementById('angleScreen').classList.add('active-screen'); drawCompassTicks(); }
-    if (mode === 'sos') document.getElementById('sosScreen').classList.add('active-screen');
-    
-    // [지도 탭 처리]
-    if (mode === 'gps') {
-        document.getElementById('gpsScreen').classList.add('active-screen');
-        
-        // 1. 지도 생성 (없으면)
-        initMap();
-        
-        // 2. 지도 크기 재계산 (중요)
-        setTimeout(() => {
-            if(map) {
-                map.invalidateSize();
-                // 내 위치가 있으면 거기로 이동
-                if(myLat !== 0) map.setView([myLat, myLng], 15);
-            }
-        }, 300);
-    }
-
-    if(btn) btn.classList.add('active');
 }
 
 // ===========================
@@ -231,8 +196,7 @@ function initMap() {
     mapMarker = L.marker([37.5665, 126.9780], {icon: icon}).addTo(map);
 }
 function updateSpeedometer(speedMPS) {
-    let kmh = 0;
-    if (speedMPS && speedMPS > 0) { kmh = (speedMPS * 3.6).toFixed(0); }
+    let kmh = 0; if (speedMPS !== null && speedMPS > 0) kmh = (speedMPS * 3.6).toFixed(0); 
     document.getElementById('speedValue').textContent = kmh;
 }
 function updateMapMarker(lat, lng) {
@@ -328,8 +292,26 @@ function handleOrientation(event) {
 }
 
 // ===========================
-// 5. 측정 (유지)
+// 5. 탭 전환 & 측정
 // ===========================
+function switchTab(mode, btn) {
+    currentMode = mode;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    
+    if (mode === 'level') document.getElementById('levelScreen').classList.add('active-screen');
+    if (mode === 'measure') document.getElementById('measureScreen').classList.add('active-screen');
+    if (mode === 'angle') { document.getElementById('angleScreen').classList.add('active-screen'); drawCompassTicks(); }
+    if (mode === 'gps') {
+        document.getElementById('gpsScreen').classList.add('active-screen');
+        initMap();
+        setTimeout(() => { if(map) { map.invalidateSize(); if(myLat !== 0) map.setView([myLat, myLng], 15); } }, 300);
+    }
+    if (mode === 'sos') document.getElementById('sosScreen').classList.add('active-screen');
+
+    if(btn) btn.classList.add('active');
+}
+
 function startMeasure(type) { measureRefType = type; document.getElementById('cameraInput').click(); }
 function handleImageUpload(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(evt) { const img = new Image(); img.onload = function() { setupCanvas(img); }; img.src = evt.target.result; }; reader.readAsDataURL(file); }
 function setupCanvas(img) { const canvas = document.getElementById('measureCanvas'); const ctx = canvas.getContext('2d'); document.getElementById('measureMenu').style.display = 'none'; document.getElementById('stepBar').style.display = 'block'; canvas.style.display = 'block'; canvas.width = window.innerWidth; canvas.height = window.innerHeight; const hRatio = canvas.width / img.width; const vRatio = canvas.height / img.height; const ratio = Math.min(hRatio, vRatio); const cx = (canvas.width - img.width*ratio) / 2; const cy = (canvas.height - img.height*ratio) / 2; window.bgImage = { img, cx, cy, w: img.width*ratio, h: img.height*ratio }; redrawCanvas(); measureState = 1; refLine = null; targetLine = null; updateStepUI(); initTouchDraw(canvas); }
