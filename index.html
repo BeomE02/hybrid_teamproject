@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1, viewport-fit=cover">
     <title>스마트 측정 도구</title>
     <style>
-        /* 기본 설정 (기존과 동일) */
+        /* 기본 설정 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-touch-callout: none; user-select: none; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -23,7 +23,99 @@
         .tab { flex: 1; text-align: center; border: none; background: transparent; color: #8d93ab; font-size: 16px; font-weight: bold; cursor: pointer; padding-bottom: env(safe-area-inset-bottom); height: 60px; display: flex; align-items: center; justify-content: center; }
         .tab.active { background: #0f3460; color: #e94560; border-top: 3px solid #e94560; }
 
-        /* 수평계, 나침반 스타일 (기존 유지) */
+        /* =========================== */
+        /* [업그레이드] 나침반 UI 스타일 */
+        /* =========================== */
+        .compass-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, #2a2a40 0%, #16213e 100%);
+            box-shadow: 
+                inset 0 0 20px rgba(0,0,0,0.5), /* 안쪽 그림자 */
+                0 10px 30px rgba(0,0,0,0.5),    /* 바깥 그림자 */
+                0 0 0 5px rgba(255,255,255,0.05); /* 테두리 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* 부드러운 회전 */
+        }
+
+        /* 눈금판 (회전하는 부분) */
+        .compass-dial {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            border-radius: 50%;
+        }
+
+        /* 눈금 (JS로 생성) */
+        .tick {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            width: 2px;
+            height: 15px;
+            background: #555;
+            transform-origin: center 150px; /* 원 중심 기준 회전 */
+        }
+        .tick.major {
+            width: 3px;
+            height: 25px;
+            background: #fff;
+        }
+        .tick-label {
+            position: absolute;
+            left: 50%;
+            top: 30px;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+        }
+        .tick-label.north { color: #e94560; font-size: 24px; top: 25px; } /* N은 빨간색 */
+
+        /* 고정된 붉은 화살표 (현재 방향) */
+        .fixed-arrow {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0; 
+            height: 0; 
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 25px solid #e94560; /* 역삼각형 */
+            z-index: 20;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
+        }
+        
+        /* 중앙 십자선 */
+        .crosshair {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.1);
+            pointer-events: none;
+        }
+        .crosshair::before, .crosshair::after {
+            content: ''; position: absolute; background: rgba(233, 69, 96, 0.3);
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+        .crosshair::before { width: 100%; height: 1px; }
+        .crosshair::after { width: 1px; height: 100%; }
+
+        /* 하단 수치 표시 */
+        .compass-stats {
+            margin-top: 40px;
+            text-align: center;
+        }
+        .compass-value { font-size: 60px; font-weight: bold; font-variant-numeric: tabular-nums; letter-spacing: -2px; }
+        .direction-text { font-size: 24px; color: #e94560; font-weight: bold; margin-top: 5px; }
+
+        /* 기타 스타일 (수평계, 측정 등 유지) */
         .level-wrap { position: relative; width: min(260px, 70vw); height: min(260px, 70vw); margin-top: -20px; }
         .level-outer { width: 100%; height: 100%; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
         .level-center-mark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; border: 2px solid #fff; border-radius: 50%; z-index: 2; }
@@ -31,39 +123,17 @@
         #bubble.green { background: #4CAF50; box-shadow: 0 0 20px #4CAF50; }
         .angle-text { font-size: 40px; font-weight: bold; margin-top: 30px; }
         .angle-sub { font-size: 16px; color: #aaa; margin-top: 10px; }
-
-        .compass-wrap { width: min(280px, 75vw); height: min(280px, 75vw); position: relative; background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Compass_Card.png/600px-Compass_Card.png'); background-size: cover; border-radius: 50%; transition: transform 0.1s linear; box-shadow: 0 0 30px rgba(255,255,255,0.1); }
-        .fixed-marker { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 6px; height: 25px; background: #e94560; z-index: 10; border-radius: 3px; box-shadow: 0 0 10px #e94560;}
-        .compass-value { font-size: 50px; font-weight: bold; margin-top: 30px; }
-        .compass-desc { color: #888; margin-bottom: 20px; font-size: 14px; }
-
-        /* [중요] 길이 측정 UI 개선 */
         .camera-btn { background: #0f3460; border: 2px solid #e94560; color: white; padding: 20px; width: 100%; border-radius: 15px; margin-bottom: 15px; text-align: left; display: flex; align-items: center; }
         .camera-btn i { font-size: 24px; margin-right: 15px; }
         .camera-btn div { display: flex; flex-direction: column; }
         .camera-btn span { font-size: 18px; font-weight: bold; }
         .camera-btn small { font-size: 13px; color: #ccc; margin-top: 4px; }
-
         #measureCanvas { display: none; position: absolute; top: 0; left: 0; z-index: 10; background: black; }
-        
-        /* 측정 단계 안내바 */
-        #stepBar {
-            display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.85); padding: 15px 25px; border-radius: 30px; z-index: 20;
-            width: 90%; text-align: center; border: 1px solid #444;
-        }
+        #stepBar { display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); padding: 15px 25px; border-radius: 30px; z-index: 20; width: 90%; text-align: center; border: 1px solid #444; }
         #stepText { font-size: 16px; font-weight: bold; display: block; margin-bottom: 10px; }
         #stepActionBtn { background: #e94560; border: none; color: white; padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; }
         #stepResetBtn { background: #555; border: none; color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; margin-left: 10px; }
-
-        /* 결과 표시 */
-        #finalResult {
-            display: none; position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.9); padding: 20px 40px; border-radius: 15px; z-index: 20;
-            text-align: center; border: 2px solid #e94560;
-        }
-
-        /* iOS 권한 */
+        #finalResult { display: none; position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); padding: 20px 40px; border-radius: 15px; z-index: 20; text-align: center; border: 2px solid #e94560; }
         #startOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
         .big-start-btn { padding: 20px 50px; font-size: 22px; background: #e94560; color: white; border: none; border-radius: 50px; margin-top: 30px; font-weight: bold; box-shadow: 0 0 20px rgba(233, 69, 96, 0.5); }
         .action-btn { background: #0f3460; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: bold; margin: 5px; }
@@ -94,29 +164,15 @@
         <div id="measureScreen" class="screen">
             <div id="measureMenu" style="width: 100%; max-width: 400px;">
                 <h2 style="text-align: center; margin-bottom: 10px;">길이 측정</h2>
-                <p style="text-align: center; margin-bottom: 30px; color: #888;">
-                    정확한 측정을 위해<br>
-                    <b>2단계(기준설정 → 측정)</b>로 진행됩니다.
-                </p>
-                
+                <p style="text-align: center; margin-bottom: 30px; color: #888;"><b>2단계(기준설정 → 측정)</b>로 진행됩니다.</p>
                 <button class="camera-btn" onclick="startMeasure('card')">
-                    <i>💳</i>
-                    <div>
-                        <span>신용카드 기준 (85.6mm)</span>
-                        <small>신용카드와 함께 사진을 찍으세요</small>
-                    </div>
+                    <i>💳</i><div><span>신용카드 기준 (85.6mm)</span><small>신용카드와 함께 사진을 찍으세요</small></div>
                 </button>
                 <button class="camera-btn" onclick="startMeasure('coin')">
-                    <i>🪙</i>
-                    <div>
-                        <span>500원 동전 기준 (26.5mm)</span>
-                        <small>500원 동전과 함께 사진을 찍으세요</small>
-                    </div>
+                    <i>🪙</i><div><span>500원 동전 기준 (26.5mm)</span><small>500원 동전과 함께 사진을 찍으세요</small></div>
                 </button>
             </div>
-
             <canvas id="measureCanvas"></canvas>
-            
             <div id="stepBar">
                 <span id="stepText" style="color: #4CAF50;">1단계: 신용카드 길이를 표시하세요</span>
                 <div style="display:flex; justify-content:center;">
@@ -124,7 +180,6 @@
                     <button id="stepResetBtn" onclick="resetMeasure()">처음부터</button>
                 </div>
             </div>
-
             <div id="finalResult">
                 <div style="font-size: 14px; color:#ccc;">측정 결과</div>
                 <div id="resultValue" style="font-size: 42px; font-weight: bold; margin: 10px 0; color: #fff;">0 mm</div>
@@ -133,14 +188,18 @@
         </div>
 
         <div id="angleScreen" class="screen">
-            <h2 style="margin-bottom: 10px;">나침반</h2>
-            <p class="compass-desc">폰을 하늘 방향(수평)으로 들고 계세요</p>
-            <div style="position: relative; margin: 20px 0;">
-                <div class="fixed-marker"></div>
-                <div class="compass-wrap" id="compassRotator"></div>
+            <div class="fixed-arrow"></div>
+            
+            <div class="compass-container" id="compassContainer">
+                <div class="compass-dial" id="compassDial">
+                    </div>
+                <div class="crosshair"></div>
             </div>
-            <div class="compass-value" id="compassValue">0°</div>
-            <div id="directionText" style="font-size: 24px; color: #e94560; font-weight: bold;">N</div>
+
+            <div class="compass-stats">
+                <div class="compass-value" id="compassValue">0°</div>
+                <div class="direction-text" id="directionText">N</div>
+            </div>
         </div>
 
         <div class="tab-menu">
