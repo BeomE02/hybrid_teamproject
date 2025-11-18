@@ -157,7 +157,7 @@ function emergencyStop() {
 }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function runSOSPattern() {
-    const DOT = 200; const DASH = 600; const GAP = 200; const LETTER_GAP = 600; const WORD_GAP = 1500;
+    const DOT = 100; const DASH = 300; const GAP = 100; const LETTER_GAP = 300; const WORD_GAP = 900;
     const flashPulse = async (duration) => { if (!isSOSOn) return; await setHardwareFlash(true); await sleep(duration); await setHardwareFlash(false); };
     while (isSOSOn) {
         await flashPulse(DOT); await sleep(GAP); await flashPulse(DOT); await sleep(GAP); await flashPulse(DOT); await sleep(LETTER_GAP); if (!isSOSOn) break;
