@@ -17,21 +17,20 @@ let isTiltAlarmOn = false;
 let lastAlertTime = 0;
 let audioCtx = null;
 
-// GPS & 지도
 let myLat = 0, myLng = 0;
 let targetLat = null, targetLng = null;
 let watchId = null;
 let map = null;
 let mapMarker = null;
 
-// [신규] SOS 관련
-let flashStream = null; // 카메라 플래시 스트림
+// SOS
+let flashStream = null;
 let isFlashOn = false;
 let isSirenOn = false;
 let isSOSOn = false;
-let sirenOsc = null;    // 사이렌 소리 발진기
+let sirenOsc = null;
 let sirenGain = null;
-let sosInterval = null; // SOS 타이머
+let sosInterval = null;
 
 const REF_SIZE = { card: 85.60, coin: 26.50 };
 
@@ -93,150 +92,94 @@ function startGPS() {
 }
 
 // ===========================
-// [신규] SOS & 사이렌 기능
+// SOS & 사이렌 (아이콘 적용)
 // ===========================
-
-// 1. 하드웨어 플래시 + 화면 플래시 제어
 async function toggleFlashlight() {
-    // 다른 기능이 켜져 있으면 끄기
     if(isSOSOn) toggleSOS(); 
-
     isFlashOn = !isFlashOn;
     updateFlashState(isFlashOn);
-    
     const btn = document.getElementById('btnFlash');
     if(isFlashOn) btn.classList.add('active');
     else btn.classList.remove('active');
 }
 
 async function updateFlashState(on) {
-    // 1. 하드웨어 플래시 시도 (안드로이드 크롬)
     try {
         if (on) {
             if (!flashStream) {
-                flashStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment' }
-                });
+                flashStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             }
             const track = flashStream.getVideoTracks()[0];
-            // torch 기능이 있는지 확인 후 켜기
             const capabilities = track.getCapabilities();
-            if (capabilities.torch) {
-                await track.applyConstraints({ advanced: [{ torch: true }] });
-            }
+            if (capabilities.torch) await track.applyConstraints({ advanced: [{ torch: true }] });
         } else {
             if (flashStream) {
                 const track = flashStream.getVideoTracks()[0];
                 await track.applyConstraints({ advanced: [{ torch: false }] });
-                track.stop();
-                flashStream = null;
+                track.stop(); flashStream = null;
             }
         }
-    } catch (e) {
-        console.log("Hardware flash not supported or denied:", e);
-    }
-
-    // 2. 화면 플래시 (아이폰 등 공통)
+    } catch (e) { console.log("Flash Error:", e); }
     const overlay = document.getElementById('screenFlashOverlay');
-    if (on) overlay.classList.add('active');
-    else overlay.classList.remove('active');
+    if (on) overlay.classList.add('active'); else overlay.classList.remove('active');
 }
 
-// 2. 사이렌 소리 (Wail 효과)
 function toggleSiren() {
     isSirenOn = !isSirenOn;
     const btn = document.getElementById('btnSiren');
-    
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
 
     if (isSirenOn) {
         btn.classList.add('active');
-        btn.textContent = "🔊 사이렌 끄기";
+        // [수정] 아이콘 포함 텍스트 변경
+        btn.innerHTML = '<span class="material-symbols-rounded">volume_off</span> 사이렌 끄기';
         startSirenSound();
     } else {
         btn.classList.remove('active');
-        btn.innerHTML = "<i>🔊</i> 사이렌";
+        btn.innerHTML = '<span class="material-symbols-rounded">volume_up</span> 사이렌';
         stopSirenSound();
     }
 }
 
 function startSirenSound() {
     if (sirenOsc) stopSirenSound();
-    
     sirenOsc = audioCtx.createOscillator();
     sirenGain = audioCtx.createGain();
-    
-    sirenOsc.type = 'sawtooth'; // 톱니파 (거친 소리)
-    sirenOsc.connect(sirenGain);
-    sirenGain.connect(audioCtx.destination);
-    
-    // 주파수 변조 (600Hz <-> 1200Hz 반복)
+    sirenOsc.type = 'sawtooth';
+    sirenOsc.connect(sirenGain); sirenGain.connect(audioCtx.destination);
     const now = audioCtx.currentTime;
     sirenOsc.frequency.setValueAtTime(600, now);
     sirenOsc.frequency.linearRampToValueAtTime(1200, now + 0.5);
     sirenOsc.frequency.linearRampToValueAtTime(600, now + 1.0);
-    
-    // 루프 생성 (단순 구현 위해 interval 사용 않고, LFO 방식 대신 재귀 호출이나 긴 램프 사용 가능하나,
-    // 여기서는 간단히 Web Audio LFO 사용)
-    const lfo = audioCtx.createOscillator();
-    lfo.type = 'triangle';
-    lfo.frequency.value = 1.0; // 1Hz 속도로 사이렌
-    const lfoGain = audioCtx.createGain();
-    lfoGain.gain.value = 600; // 변동 폭
-    
-    lfo.connect(lfoGain);
-    lfoGain.connect(sirenOsc.frequency);
-    
-    sirenOsc.start();
-    lfo.start();
-    
-    // 정지 위해 저장해둠 (단순화를 위해 lfo는 전역 변수 안 잡고 osc만 끊음)
-    sirenOsc.lfo = lfo; 
+    const lfo = audioCtx.createOscillator(); lfo.type = 'triangle'; lfo.frequency.value = 1.0;
+    const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 600;
+    lfo.connect(lfoGain); lfoGain.connect(sirenOsc.frequency);
+    sirenOsc.start(); lfo.start(); sirenOsc.lfo = lfo; 
 }
-
 function stopSirenSound() {
-    if (sirenOsc) {
-        try {
-            sirenOsc.stop();
-            if(sirenOsc.lfo) sirenOsc.lfo.stop();
-        } catch(e) {}
-        sirenOsc = null;
-    }
+    if (sirenOsc) { try { sirenOsc.stop(); if(sirenOsc.lfo) sirenOsc.lfo.stop(); } catch(e) {} sirenOsc = null; }
 }
 
-// 3. SOS 자동 모드
 function toggleSOS() {
-    // 플래시, 사이렌 끄고 시작
     if(isFlashOn) toggleFlashlight();
     if(isSirenOn) toggleSiren();
-
     isSOSOn = !isSOSOn;
     const btn = document.getElementById('btnSOS');
-
     if (isSOSOn) {
         btn.classList.add('active');
-        btn.innerHTML = "<i>🛑</i> SOS 정지";
-        
-        // SOS 루프 시작 (단순 깜빡임 반복)
-        // 실제 모스 부호(... --- ...)는 복잡하니, 빠르고 강한 깜빡임으로 대체 (가장 눈에 띔)
+        btn.innerHTML = '<span class="material-symbols-rounded">stop_circle</span> SOS 정지';
         let toggle = false;
-        sosInterval = setInterval(() => {
-            toggle = !toggle;
-            updateFlashState(toggle);
-        }, 300); // 0.3초 간격
+        sosInterval = setInterval(() => { toggle = !toggle; updateFlashState(toggle); }, 300);
     } else {
         btn.classList.remove('active');
-        btn.innerHTML = "<i>🆘</i> SOS 구조신호<br><span style='font-size:14px; font-weight:normal;'>(자동 깜빡임)</span>";
-        
-        clearInterval(sosInterval);
-        updateFlashState(false); // 끄기
+        btn.innerHTML = '<span class="material-symbols-rounded">sos</span> 구조신호<br><span style="font-size:14px; font-weight:normal;">(자동 깜빡임)</span>';
+        clearInterval(sosInterval); updateFlashState(false);
     }
 }
 
-
 // ===========================
-// 유틸: 일반 비프음
+// 유틸
 // ===========================
 function playBeep() {
     if (!audioCtx) return;
@@ -249,14 +192,12 @@ function playBeep() {
 }
 
 // ===========================
-// 2. 속도계 & 지도 기능
+// 2. 속도계 & 지도
 // ===========================
 function initMap() {
     if (map) return; 
     map = L.map('map').setView([37.5665, 126.9780], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }).addTo(map);
     const icon = L.divIcon({
         className: 'custom-map-marker',
         html: '<div style="width:15px;height:15px;background:#e94560;border:2px solid white;border-radius:50%;box-shadow:0 0 10px rgba(0,0,0,0.5);"></div>',
@@ -264,33 +205,34 @@ function initMap() {
     });
     mapMarker = L.marker([37.5665, 126.9780], {icon: icon}).addTo(map);
 }
-
 function updateSpeedometer(speedMPS) {
-    let kmh = 0;
-    if (speedMPS !== null && speedMPS > 0) {
-        kmh = (speedMPS * 3.6).toFixed(0); 
-    }
+    let kmh = 0; if (speedMPS !== null && speedMPS > 0) kmh = (speedMPS * 3.6).toFixed(0); 
     document.getElementById('speedValue').textContent = kmh;
     document.getElementById('coordInfo').textContent = `${myLat.toFixed(5)}, ${myLng.toFixed(5)}`;
 }
-
 function updateMapMarker(lat, lng) {
     if (!map || !mapMarker) return;
-    mapMarker.setLatLng([lat, lng]);
-    map.setView([lat, lng], map.getZoom()); 
+    mapMarker.setLatLng([lat, lng]); map.setView([lat, lng], map.getZoom()); 
 }
 
-
 // ===========================
-// 3. 수평계 기능
+// 3. 수평계 (아이콘 적용)
 // ===========================
 function toggleTiltAlarm() {
     isTiltAlarmOn = !isTiltAlarmOn;
     const btn = document.getElementById('tiltAlarmBtn');
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    if (isTiltAlarmOn) { btn.textContent = "⚠️ 알림 켜짐"; btn.classList.add('on'); if(navigator.vibrate) navigator.vibrate([200]); playBeep(); } 
-    else { btn.textContent = "🔕 알림 꺼짐"; btn.classList.remove('on'); document.body.style.backgroundColor = '#1a1a2e'; }
+    if (isTiltAlarmOn) {
+        // [수정] 아이콘 포함 텍스트 변경
+        btn.innerHTML = '<span class="material-symbols-rounded">notifications_active</span> 알림 켜짐';
+        btn.classList.add('on');
+        if(navigator.vibrate) navigator.vibrate([200]); playBeep();
+    } else {
+        btn.innerHTML = '<span class="material-symbols-rounded">notifications_off</span> 알림 꺼짐';
+        btn.classList.remove('on');
+        document.body.style.backgroundColor = '#1a1a2e';
+    }
 }
 
 function setLevelMode(mode) {
@@ -298,19 +240,24 @@ function setLevelMode(mode) {
     document.getElementById('btnModeSurface').classList.remove('active');
     document.getElementById('btnModeBarH').classList.remove('active');
     document.getElementById('btnModeBarV').classList.remove('active');
+    
     const surfaceUI = document.getElementById('surfaceLevel');
     const barUI = document.getElementById('barLevelContainer');
     const barWrap = document.getElementById('barLevel');
     const textUI = document.getElementById('levelModeText');
+    
     if (mode === 'surface') {
         document.getElementById('btnModeSurface').classList.add('active');
-        surfaceUI.classList.add('active'); barUI.classList.remove('active'); textUI.textContent = "평면 모드 (전체 수평)";
+        surfaceUI.classList.add('active'); barUI.classList.remove('active');
+        textUI.textContent = "평면 모드 (전체 수평)";
     } else {
         surfaceUI.classList.remove('active'); barUI.classList.add('active');
         if (mode === 'bar_h') {
-            document.getElementById('btnModeBarH').classList.add('active'); barWrap.classList.remove('vertical-mode'); textUI.textContent = "가로 모드 (X축)";
+            document.getElementById('btnModeBarH').classList.add('active');
+            barWrap.classList.remove('vertical-mode'); textUI.textContent = "가로 모드 (X축)";
         } else {
-            document.getElementById('btnModeBarV').classList.add('active'); barWrap.classList.add('vertical-mode'); textUI.textContent = "세로 모드 (Y축)";
+            document.getElementById('btnModeBarV').classList.add('active');
+            barWrap.classList.add('vertical-mode'); textUI.textContent = "세로 모드 (Y축)";
         }
     }
 }
@@ -351,7 +298,7 @@ function handleMotion(event) {
 function calibrateLevel() { calibration.x = rawSensor.x; calibration.y = rawSensor.y; alert('0점 설정 완료'); }
 
 // ===========================
-// 4. 나침반 + GPS
+// 4. 나침반
 // ===========================
 function saveCurrentLocation() {
     if (myLat === 0 && myLng === 0) { alert("GPS 신호를 기다리는 중입니다..."); return; }
@@ -410,22 +357,15 @@ function handleOrientation(event) {
 // ===========================
 function switchTab(mode, btn) {
     currentMode = mode;
-    // 모든 화면 숨기기
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     
-    // 해당 모드 화면 보이기
     if (mode === 'level') document.getElementById('levelScreen').classList.add('active-screen');
     if (mode === 'measure') document.getElementById('measureScreen').classList.add('active-screen');
     if (mode === 'angle') { document.getElementById('angleScreen').classList.add('active-screen'); drawCompassTicks(); }
-    if (mode === 'gps') {
-        document.getElementById('gpsScreen').classList.add('active-screen');
-        initMap();
-        setTimeout(() => { map.invalidateSize(); }, 200);
-    }
+    if (mode === 'gps') { document.getElementById('gpsScreen').classList.add('active-screen'); initMap(); setTimeout(() => { map.invalidateSize(); }, 200); }
     if (mode === 'sos') document.getElementById('sosScreen').classList.add('active-screen');
 
-    // 탭 활성화
     if(btn) btn.classList.add('active');
 }
 
