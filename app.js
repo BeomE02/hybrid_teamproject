@@ -2,7 +2,7 @@
 // 전역 변수
 // ===========================
 let currentMode = 'level';
-let levelDisplayMode = 'surface'; // 'surface', 'bar_h', 'bar_v'
+let levelDisplayMode = 'surface';
 
 let calibration = { x: 0, y: 0 };
 let rawSensor = { x: 0, y: 0 };
@@ -15,6 +15,11 @@ let isTiltAlarmOn = false;
 let lastAlertTime = 0;
 let audioCtx = null;
 
+// [신규] GPS 관련 변수
+let myLat = 0, myLng = 0;
+let targetLat = null, targetLng = null;
+let watchId = null;
+
 const REF_SIZE = { card: 85.60, coin: 26.50 };
 
 // ===========================
@@ -25,14 +30,24 @@ function requestPermissions() {
     if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
         alert("⚠️ 보안 연결(HTTPS)이 필요합니다.");
     }
+    
+    // 센서 + GPS 권한 요청 순차 진행
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(res => {
-                if (res === 'granted') { startSensors(); hideOverlay(); }
+                if (res === 'granted') { startAppSystem(); }
                 else { alert('권한이 거부되었습니다.'); hideOverlay(); }
             })
-            .catch(e => { alert("오류: " + e); startSensors(); hideOverlay(); });
-    } else { startSensors(); hideOverlay(); }
+            .catch(e => { alert("오류: " + e); startAppSystem(); });
+    } else { 
+        startAppSystem(); 
+    }
+}
+
+function startAppSystem() {
+    startSensors();
+    startGPS();
+    hideOverlay();
 }
 
 function hideOverlay() { 
@@ -47,6 +62,21 @@ function startSensors() {
     document.getElementById('cameraInput').addEventListener('change', handleImageUpload);
 }
 
+// [신규] GPS 시작
+function startGPS() {
+    if (navigator.geolocation) {
+        watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                myLat = pos.coords.latitude;
+                myLng = pos.coords.longitude;
+                updateGPSUI(); // 위치 바뀌면 거리/방향 갱신
+            },
+            (err) => console.log("GPS Error: " + err.message),
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+        );
+    }
+}
+
 function playBeep() {
     if (!audioCtx) return;
     if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -58,7 +88,7 @@ function playBeep() {
 }
 
 // ===========================
-// 2. 수평계 기능 (3가지 고정 모드)
+// 2. 수평계 기능
 // ===========================
 function toggleTiltAlarm() {
     isTiltAlarmOn = !isTiltAlarmOn;
@@ -77,8 +107,6 @@ function toggleTiltAlarm() {
 
 function setLevelMode(mode) {
     levelDisplayMode = mode;
-    
-    // 탭 UI 초기화
     document.getElementById('btnModeSurface').classList.remove('active');
     document.getElementById('btnModeBarH').classList.remove('active');
     document.getElementById('btnModeBarV').classList.remove('active');
@@ -92,20 +120,16 @@ function setLevelMode(mode) {
         surfaceUI.classList.add('active');
         barUI.classList.remove('active');
         document.getElementById('levelModeText').textContent = "평면 모드 (전체 수평)";
-    } 
-    else if (mode === 'bar_h') {
+    } else if (mode === 'bar_h') {
         document.getElementById('btnModeBarH').classList.add('active');
         surfaceUI.classList.remove('active');
         barUI.classList.add('active');
-        // 가로 모드 고정 (회전 없음)
         barWrap.classList.remove('vertical-mode');
         document.getElementById('levelModeText').textContent = "가로 모드 (X축)";
-    } 
-    else if (mode === 'bar_v') {
+    } else if (mode === 'bar_v') {
         document.getElementById('btnModeBarV').classList.add('active');
         surfaceUI.classList.remove('active');
         barUI.classList.add('active');
-        // 세로 모드 고정 (90도 회전)
         barWrap.classList.add('vertical-mode');
         document.getElementById('levelModeText').textContent = "세로 모드 (Y축)";
     }
@@ -116,7 +140,6 @@ function handleMotion(event) {
     
     let acc = event.accelerationIncludingGravity;
     if (!acc) return;
-
     let x = acc.x; let y = acc.y;
 
     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) { x = -x; y = -y; }
@@ -128,55 +151,29 @@ function handleMotion(event) {
     let displayAngle = 0;
 
     if (levelDisplayMode === 'surface') {
-        // 1. 원형 (평면)
         const limit = 100;
         let moveX = x * 10; let moveY = y * -10;
         const dist = Math.sqrt(moveX*moveX + moveY*moveY);
         if (dist > limit) { moveX = (moveX/dist)*limit; moveY = (moveY/dist)*limit; }
-
         const bubble = document.getElementById('bubble');
         bubble.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
-
-        if(Math.abs(x) < 0.5 && Math.abs(y) < 0.5) {
-            bubble.classList.add('green'); isLevel = true;
-        } else {
-            bubble.classList.remove('green'); isLevel = false;
-        }
+        if(Math.abs(x) < 0.5 && Math.abs(y) < 0.5) { bubble.classList.add('green'); isLevel = true; } 
+        else { bubble.classList.remove('green'); isLevel = false; }
         displayAngle = Math.sqrt(x*x+y*y)*5;
-
     } else {
-        // 2. 막대형 (가로/세로 고정)
         const barBubble = document.getElementById('barBubble');
-        let tilt = 0;
-
-        if (levelDisplayMode === 'bar_h') {
-            // 가로 모드: X축 사용
-            tilt = x * 5;
-        } else {
-            // 세로 모드: Y축 사용 (방향 보정)
-            tilt = y * -5; 
-        }
-        
-        // 물방울 이동
+        let tilt = (levelDisplayMode === 'bar_h') ? x * 5 : y * -5;
         let barMove = tilt * 5; 
-        if (barMove > 120) barMove = 120;
-        if (barMove < -120) barMove = -120;
-
+        if (barMove > 120) barMove = 120; if (barMove < -120) barMove = -120;
         barBubble.style.left = `calc(50% + ${barMove}px)`;
-
-        // 수평 판정
-        if (Math.abs(tilt) < 1.0) {
-            barBubble.classList.add('green'); isLevel = true;
-        } else {
-            barBubble.classList.remove('green'); isLevel = false;
-        }
+        if (Math.abs(tilt) < 1.0) { barBubble.classList.add('green'); isLevel = true; } 
+        else { barBubble.classList.remove('green'); isLevel = false; }
         displayAngle = Math.abs(tilt);
     }
 
     document.getElementById('tiltAngle').textContent = Math.min(displayAngle, 90).toFixed(1) + '°';
     if(isLevel && isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e';
 
-    // 경고 알림
     if (isTiltAlarmOn && !isLevel) {
         const now = Date.now();
         if (now - lastAlertTime > 400) {
@@ -188,67 +185,102 @@ function handleMotion(event) {
         }
     }
 }
+function calibrateLevel() { calibration.x = rawSensor.x; calibration.y = rawSensor.y; alert('0점 설정 완료'); }
 
-function calibrateLevel() {
-    calibration.x = rawSensor.x;
-    calibration.y = rawSensor.y;
-    alert('현재 상태를 0점으로 설정했습니다.');
+// ===========================
+// 3. 나침반 + GPS 기능
+// ===========================
+function saveCurrentLocation() {
+    if (myLat === 0 && myLng === 0) { alert("GPS 신호를 기다리는 중입니다..."); return; }
+    targetLat = myLat; targetLng = myLng;
+    document.getElementById('btnSaveLoc').style.display = 'none';
+    document.getElementById('gpsInfo').style.display = 'block';
+    document.getElementById('targetArrow').style.display = 'block';
+    alert("현재 위치가 타겟으로 저장되었습니다.\n이제 이동하면 거리와 방향이 표시됩니다.");
+    updateGPSUI();
 }
 
-// ===========================
-// 3. 나침반 기능 (유지)
-// ===========================
+function clearLocation() {
+    targetLat = null; targetLng = null;
+    document.getElementById('btnSaveLoc').style.display = 'flex';
+    document.getElementById('gpsInfo').style.display = 'none';
+    document.getElementById('targetArrow').style.display = 'none';
+}
+
+function updateGPSUI() {
+    if (targetLat === null) return;
+
+    // 1. 거리 계산 (Haversine formula)
+    const R = 6371e3; // 지구 반경 (미터)
+    const φ1 = myLat * Math.PI/180;
+    const φ2 = targetLat * Math.PI/180;
+    const Δφ = (targetLat - myLat) * Math.PI/180;
+    const Δλ = (targetLng - myLng) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const dist = R * c; // 미터 단위 거리
+
+    // 거리 표시
+    document.getElementById('gpsDist').textContent = Math.round(dist) + " m";
+
+    // 2. 방위각(Bearing) 계산 (타겟이 어느 방향에 있는지)
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x = Math.cos(φ1)*Math.sin(φ2) -
+              Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+    const θ = Math.atan2(y, x);
+    const bearing = (θ * 180 / Math.PI + 360) % 360; // 0~360도
+
+    // 3. 타겟 화살표 회전 (나침반 판 위에서 회전)
+    // 타겟 방위각에 화살표를 고정시킴.
+    // 나침반 판(Dial) 자체가 -Heading 만큼 돌기 때문에, 
+    // 화살표는 그냥 Bearing 만큼 돌려두면 알아서 제자리를 찾음.
+    document.getElementById('targetArrow').style.transform = `rotate(${bearing}deg)`;
+}
+
 function drawCompassTicks() {
     const dial = document.getElementById('compassDial');
-    if(dial.children.length > 0) return;
+    // 타겟 화살표가 이미 들어있으므로, children check 대신 tick 존재 여부 확인
+    if(dial.querySelector('.tick')) return;
+    
     const directions = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' };
     for (let i = 0; i < 360; i += 2) {
         if (i % 10 === 0) {
-            const tick = document.createElement('div');
-            tick.className = 'tick major';
-            tick.style.transform = `rotate(${i}deg)`;
-            dial.appendChild(tick);
+            const tick = document.createElement('div'); tick.className = 'tick major';
+            tick.style.transform = `rotate(${i}deg)`; dial.appendChild(tick);
             if (i % 90 === 0) {
-                const label = document.createElement('div');
-                label.className = `tick-label ${i===0 ? 'north' : ''}`;
-                label.textContent = directions[i];
-                label.style.transform = `translateX(-50%) rotate(${-i}deg)`; 
-                const tickContainer = document.createElement('div');
-                tickContainer.style.position = 'absolute';
-                tickContainer.style.width = '100%'; tickContainer.style.height = '100%';
-                tickContainer.style.transform = `rotate(${i}deg)`; tickContainer.appendChild(label);
-                dial.appendChild(tickContainer);
+                const label = document.createElement('div'); label.className = `tick-label ${i===0 ? 'north' : ''}`;
+                label.textContent = directions[i]; label.style.transform = `translateX(-50%) rotate(${-i}deg)`; 
+                const c = document.createElement('div'); c.style.position='absolute'; c.style.width='100%'; c.style.height='100%';
+                c.style.transform=`rotate(${i}deg)`; c.appendChild(label); dial.appendChild(c);
             } else if (i % 30 === 0) {
-                const label = document.createElement('div');
-                label.className = 'tick-label'; label.style.fontSize = '12px'; label.style.top = '10px';
+                const label = document.createElement('div'); label.className = 'tick-label'; label.style.fontSize = '12px'; label.style.top = '10px';
                 label.textContent = i;
-                const tickContainer = document.createElement('div');
-                tickContainer.style.position = 'absolute';
-                tickContainer.style.width = '100%'; tickContainer.style.height = '100%';
-                tickContainer.style.transform = `rotate(${i}deg)`; tickContainer.appendChild(label);
-                dial.appendChild(tickContainer);
+                const c = document.createElement('div'); c.style.position='absolute'; c.style.width='100%'; c.style.height='100%';
+                c.style.transform=`rotate(${i}deg)`; c.appendChild(label); dial.appendChild(c);
             }
         } else {
-            const tick = document.createElement('div');
-            tick.className = 'tick';
-            tick.style.transform = `rotate(${i}deg)`;
-            dial.appendChild(tick);
+            const tick = document.createElement('div'); tick.className = 'tick';
+            tick.style.transform = `rotate(${i}deg)`; dial.appendChild(tick);
         }
     }
 }
+
 function handleOrientation(event) {
     if (currentMode !== 'angle') return;
     let h = event.webkitCompassHeading || (event.alpha ? 360 - event.alpha : 0);
     h = Math.round(h);
-    const dial = document.getElementById('compassContainer');
-    dial.style.transform = `rotate(${-h}deg)`;
+    
+    document.getElementById('compassContainer').style.transform = `rotate(${-h}deg)`;
     document.getElementById('compassValue').textContent = h + '°';
     const dirs = ['N','NE','E','SE','S','SW','W','NW'];
     document.getElementById('directionText').textContent = dirs[Math.round(h/45)%8];
 }
 
 // ===========================
-// 4. 탭 전환 (유지)
+// 4. 탭 전환 & 측정 기능 (유지)
 // ===========================
 function switchTab(mode, btn) {
     currentMode = mode;
@@ -259,9 +291,6 @@ function switchTab(mode, btn) {
     if(mode === 'angle') drawCompassTicks();
 }
 
-// ===========================
-// 5. 길이 측정 (유지)
-// ===========================
 function startMeasure(type) { measureRefType = type; document.getElementById('cameraInput').click(); }
 function handleImageUpload(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(evt) { const img = new Image(); img.onload = function() { setupCanvas(img); }; img.src = evt.target.result; }; reader.readAsDataURL(file); }
 function setupCanvas(img) {
