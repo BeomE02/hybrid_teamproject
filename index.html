@@ -18,83 +18,93 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; overflow: hidden;
         }
         .material-symbols-rounded { vertical-align: middle; font-size: inherit; font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-        .container { width: 100%; height: 100%; display: flex; flex-direction: column; }
-        .screen { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; overflow: hidden; width: 100%; }
+        
+        /* 전체 레이아웃 구조 (중요) */
+        .container { 
+            width: 100%; height: 100%; 
+            display: flex; flex-direction: column; 
+        }
+        
+        /* 각 화면 (Screen) 공통 */
+        .screen { 
+            flex: 1; /* 남은 공간 모두 차지 */
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px; 
+            position: relative; 
+            overflow: hidden; 
+            width: 100%; 
+        }
         .active-screen { display: flex; }
 
-        /* 하단 탭 메뉴 */
-        .tab-menu { display: flex; background: #16213e; height: 65px; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); height: calc(65px + env(safe-area-inset-bottom)); z-index: 1000; border-top: 1px solid rgba(255,255,255,0.05); }
+        /* 하단 탭 메뉴 (높이 고정) */
+        .tab-menu { 
+            display: flex; 
+            background: #16213e; 
+            height: 65px; 
+            flex-shrink: 0; /* 크기 줄어들지 않음 */
+            padding-bottom: env(safe-area-inset-bottom); 
+            height: calc(65px + env(safe-area-inset-bottom)); 
+            z-index: 1000; 
+            border-top: 1px solid rgba(255,255,255,0.05); 
+        }
         .tab { flex: 1; text-align: center; border: none; background: transparent; color: #6c757d; font-size: 11px; font-weight: 600; cursor: pointer; padding-bottom: env(safe-area-inset-bottom); height: 65px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: color 0.2s; }
         .tab span.material-symbols-rounded { font-size: 26px; margin-bottom: 2px; }
         .tab.active { color: #e94560; }
 
-        /* [수정] 속도계/지도 UI (오버레이 방식) */
-        #gpsScreen { 
-            padding: 0; 
-            display: none; 
-            position: relative; /* 자식 absolute 기준 */
-            height: 100%;       /* 전체 높이 사용 */
+        /* [수정] GPS/지도 화면 레이아웃 */
+        #gpsScreen {
+            padding: 0 !important; /* 패딩 제거 */
+            position: relative;
+            /* flex: 1 은 .screen에서 상속받음 */
         }
         
-        /* 지도: 전체 화면 채움 */
+        /* 지도 (남은 공간 꽉 채우기) */
         #map { 
             width: 100%; 
-            height: 100%; 
+            flex: 1; /* 남은 높이 모두 차지 */
             background: #222; 
-            z-index: 1; 
+            z-index: 1;
         }
-        /* 지도 다크모드 필터 */
-        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { 
-            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); 
-        }
-
-        /* 속도계: 지도 위에 둥둥 떠있음 */
+        
+        /* 속도계 오버레이 (지도 위에 뜸) */
         .speed-overlay {
             position: absolute;
-            top: 20px; 
+            top: 30px; 
             left: 50%;
             transform: translateX(-50%);
             z-index: 500; /* 지도보다 위에 */
-            background: rgba(22, 33, 62, 0.85); /* 반투명 배경 */
-            backdrop-filter: blur(10px);        /* 블러 효과 */
-            padding: 15px 30px;
+            background: rgba(22, 33, 62, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 15px 40px;
             border-radius: 25px;
             border: 1px solid rgba(255,255,255,0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            width: auto;
-            min-width: 150px;
+            pointer-events: none; /* 터치 통과 (지도 조작 가능하게) */
         }
         
-        .speed-value { 
-            font-size: 64px; 
-            font-weight: 800; 
-            color: #e94560; 
-            font-variant-numeric: tabular-nums; 
-            line-height: 1; 
-            text-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
-        }
-        .speed-unit { 
-            font-size: 16px; 
-            color: #ccc; 
-            font-weight: bold; 
-            margin-top: 2px;
-        }
-        .coord-info { 
-            margin-top: 8px; 
-            font-size: 11px; 
-            color: #888; 
+        .speed-value { font-size: 64px; font-weight: 800; color: #e94560; font-variant-numeric: tabular-nums; line-height: 1; text-shadow: 0 0 20px rgba(233, 69, 96, 0.3); }
+        .speed-unit { font-size: 16px; color: #ccc; font-weight: bold; margin-top: 2px; }
+        .coord-info { margin-top: 8px; font-size: 11px; color: #888; }
+
+        /* 지도 다크모드 */
+        .leaflet-layer, .leaflet-control-zoom-in, .leaflet-control-zoom-out, .leaflet-control-attribution { 
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); 
         }
 
-        /* 공통 UI */
+        /* 나머지 UI (수평계, 나침반, SOS 등 기존 유지) */
         .level-mode-tabs { display: flex; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 4px; margin-bottom: 30px; gap: 2px; }
         .mode-tab { padding: 10px 15px; border: none; background: transparent; color: #aaa; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 16px; transition: all 0.2s; }
         .mode-tab.active { background: #e94560; color: white; box-shadow: 0 2px 10px rgba(233, 69, 96, 0.4); }
         .vibrate-toggle { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #aaa; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; z-index: 50; transition: all 0.3s; display: flex; align-items: center; gap: 6px; }
         .vibrate-toggle.on { background: rgba(233, 69, 96, 0.2); border-color: #e94560; color: #e94560; box-shadow: 0 0 10px rgba(233, 69, 96, 0.3); animation: pulse-border 2s infinite; }
         .action-btn { background: #0f3460; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: bold; margin: 5px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        
         .level-wrap { position: relative; width: min(260px, 70vw); height: min(260px, 70vw); display: none; }
         .level-wrap.active { display: block; }
         .level-outer { width: 100%; height: 100%; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
@@ -110,6 +120,7 @@
         #barBubble.green { background: #4CAF50; box-shadow: 0 0 20px #4CAF50; }
         .angle-text { font-size: 40px; font-weight: bold; margin-top: 30px; font-variant-numeric: tabular-nums; }
         .angle-sub { font-size: 16px; color: #aaa; margin-top: 10px; }
+
         .camera-btn { background: #0f3460; border: 2px solid #e94560; color: white; padding: 20px; width: 100%; border-radius: 15px; margin-bottom: 15px; text-align: left; display: flex; align-items: center; }
         .camera-btn .material-symbols-rounded { font-size: 32px; margin-right: 15px; color: #e94560; }
         .camera-btn div { display: flex; flex-direction: column; }
@@ -121,6 +132,7 @@
         #stepActionBtn { background: #e94560; border: none; color: white; padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; }
         #stepResetBtn { background: #555; border: none; color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; margin-left: 10px; }
         #finalResult { display: none; position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); padding: 20px 40px; border-radius: 15px; z-index: 20; text-align: center; border: 2px solid #e94560; }
+        
         .compass-area-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .compass-area-wrapper.shrink { transform: scale(0.75) translateY(40px); }
         .compass-container { position: relative; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle at center, #2a2a40 0%, #16213e 100%); box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.5), 0 0 0 5px rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; transition: transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
