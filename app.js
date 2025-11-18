@@ -3,27 +3,25 @@
 // ===========================
 let currentMode = 'level';
 let calibration = { x: 0, y: 0 };
-
-// 측정 관련 변수
-let measureState = 0; // 0:대기, 1:기준설정중, 2:측정중, 3:결과
+let measureState = 0; 
 let measureRefType = 'card'; 
-let pixelsPerMM = 0; // 핵심: 1mm당 픽셀 비율
-let refLine = null; // {start, end} 기준선 좌표
-let targetLine = null; // {start, end} 측정선 좌표
+let pixelsPerMM = 0; 
+let refLine = null; 
+let targetLine = null;
 
-const REF_SIZE = {
-    card: 85.60, // 신용카드 너비 (mm)
-    coin: 26.50  // 500원 지름 (mm)
-};
+// [수정] 수평계 경고 알림 상태 (기본값: 꺼짐)
+let isTiltAlarmOn = false;
+let lastVibrateTime = 0; // 과도한 진동 방지용
+
+const REF_SIZE = { card: 85.60, coin: 26.50 };
 
 // ===========================
-// 1. 초기화 & 권한
+// 1. 초기화
 // ===========================
 function requestPermissions() {
     if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
         alert("⚠️ 보안 연결(HTTPS)이 필요합니다.");
     }
-
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(res => {
@@ -31,12 +29,14 @@ function requestPermissions() {
                 else { alert('권한이 거부되었습니다.'); hideOverlay(); }
             })
             .catch(e => { alert("오류: " + e); startSensors(); hideOverlay(); });
-    } else {
-        startSensors(); hideOverlay();
-    }
+    } else { startSensors(); hideOverlay(); }
 }
 
-function hideOverlay() { document.getElementById('startOverlay').style.display = 'none'; }
+function hideOverlay() { 
+    document.getElementById('startOverlay').style.display = 'none'; 
+    drawCompassTicks(); 
+}
+
 function startSensors() {
     window.addEventListener('devicemotion', handleMotion, true);
     if ('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute', handleOrientation, true);
@@ -45,19 +45,21 @@ function startSensors() {
 }
 
 // ===========================
-// 2. 탭 전환
+// 2. 수평계 기능 (경고 진동 추가)
 // ===========================
-function switchTab(mode, btn) {
-    currentMode = mode;
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-    document.getElementById(mode + 'Screen').classList.add('active-screen');
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    if(btn) btn.classList.add('active');
+function toggleTiltAlarm() {
+    isTiltAlarmOn = !isTiltAlarmOn;
+    const btn = document.getElementById('tiltAlarmBtn');
+    if (isTiltAlarmOn) {
+        btn.textContent = "⚠️ 알림 켜짐";
+        btn.classList.add('on');
+        alert("수평이 맞지 않으면 진동이 울립니다.");
+    } else {
+        btn.textContent = "🔕 알림 꺼짐";
+        btn.classList.remove('on');
+    }
 }
 
-// ===========================
-// 3. 수평계 (기존 유지)
-// ===========================
 function handleMotion(event) {
     if (currentMode !== 'level') return;
     let acc = event.accelerationIncludingGravity;
@@ -65,226 +67,157 @@ function handleMotion(event) {
     let x = acc.x, y = acc.y;
     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) { x = -x; y = -y; }
     x -= calibration.x; y -= calibration.y;
-    
     const limit = 100;
-    let moveX = x * 10;
-    let moveY = y * -10;
+    let moveX = x * 10; let moveY = y * -10;
     const dist = Math.sqrt(moveX*moveX + moveY*moveY);
     if (dist > limit) { moveX = (moveX/dist)*limit; moveY = (moveY/dist)*limit; }
     
     const bubble = document.getElementById('bubble');
+    let isLevel = false;
+
     if(bubble) {
         bubble.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
-        if(Math.abs(x)<0.5 && Math.abs(y)<0.5) bubble.classList.add('green');
-        else bubble.classList.remove('green');
+        
+        // 수평 판별 (오차범위 0.5)
+        if(Math.abs(x) < 0.5 && Math.abs(y) < 0.5) {
+            bubble.classList.add('green');
+            isLevel = true;
+        } else {
+            bubble.classList.remove('green');
+            isLevel = false;
+        }
     }
     document.getElementById('tiltAngle').textContent = Math.min(Math.sqrt(x*x+y*y)*5, 90).toFixed(1) + '°';
+
+    // [핵심 기능] 기울기 경고 진동 (버튼 켜짐 + 수평 아님)
+    if (isTiltAlarmOn && !isLevel) {
+        const now = Date.now();
+        // 0.3초 간격으로 진동 (너무 잦은 호출 방지)
+        if (now - lastVibrateTime > 300) {
+            if(navigator.vibrate) navigator.vibrate(100);
+            lastVibrateTime = now;
+        }
+    }
 }
 function calibrateLevel() { alert('0점 보정 완료'); }
 
 // ===========================
-// 4. 나침반 (기존 유지)
+// 3. 나침반 기능 (진동 없음)
 // ===========================
+function drawCompassTicks() {
+    const dial = document.getElementById('compassDial');
+    if(dial.children.length > 0) return;
+    const directions = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' };
+    for (let i = 0; i < 360; i += 2) {
+        if (i % 10 === 0) {
+            const tick = document.createElement('div');
+            tick.className = 'tick major';
+            tick.style.transform = `rotate(${i}deg)`;
+            dial.appendChild(tick);
+            if (i % 90 === 0) {
+                const label = document.createElement('div');
+                label.className = `tick-label ${i===0 ? 'north' : ''}`;
+                label.textContent = directions[i];
+                label.style.transform = `translateX(-50%) rotate(${-i}deg)`; 
+                const tickContainer = document.createElement('div');
+                tickContainer.style.position = 'absolute';
+                tickContainer.style.width = '100%'; tickContainer.style.height = '100%';
+                tickContainer.style.transform = `rotate(${i}deg)`; tickContainer.appendChild(label);
+                dial.appendChild(tickContainer);
+            } else if (i % 30 === 0) {
+                const label = document.createElement('div');
+                label.className = 'tick-label'; label.style.fontSize = '12px'; label.style.top = '10px';
+                label.textContent = i;
+                const tickContainer = document.createElement('div');
+                tickContainer.style.position = 'absolute';
+                tickContainer.style.width = '100%'; tickContainer.style.height = '100%';
+                tickContainer.style.transform = `rotate(${i}deg)`; tickContainer.appendChild(label);
+                dial.appendChild(tickContainer);
+            }
+        } else {
+            const tick = document.createElement('div');
+            tick.className = 'tick';
+            tick.style.transform = `rotate(${i}deg)`;
+            dial.appendChild(tick);
+        }
+    }
+}
+
 function handleOrientation(event) {
     if (currentMode !== 'angle') return;
     let h = event.webkitCompassHeading || (event.alpha ? 360 - event.alpha : 0);
     h = Math.round(h);
-    document.getElementById('compassRotator').style.transform = `rotate(${-h}deg)`;
+    const dial = document.getElementById('compassContainer');
+    dial.style.transform = `rotate(${-h}deg)`;
     document.getElementById('compassValue').textContent = h + '°';
     const dirs = ['N','NE','E','SE','S','SW','W','NW'];
-    document.getElementById('directionText').textContent = dirs[Math.round(h/45)%8];
+    const dirText = dirs[Math.round(h/45)%8];
+    document.getElementById('directionText').textContent = dirText;
+    // [확인] 나침반 진동 코드는 모두 제거되었습니다.
 }
 
 // ===========================
-// 5. [핵심] 길이 측정 (2단계 로직 적용)
+// 4. 탭 전환
 // ===========================
-function startMeasure(type) {
-    measureRefType = type;
-    document.getElementById('cameraInput').click();
+function switchTab(mode, btn) {
+    currentMode = mode;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+    document.getElementById(mode + 'Screen').classList.add('active-screen');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    if(mode === 'angle') drawCompassTicks();
 }
 
-function handleImageUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-        const img = new Image();
-        img.onload = function() { setupCanvas(img); };
-        img.src = evt.target.result;
-    };
-    reader.readAsDataURL(file);
-}
-
+// ===========================
+// 5. 길이 측정 (유지)
+// ===========================
+function startMeasure(type) { measureRefType = type; document.getElementById('cameraInput').click(); }
+function handleImageUpload(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(evt) { const img = new Image(); img.onload = function() { setupCanvas(img); }; img.src = evt.target.result; }; reader.readAsDataURL(file); }
 function setupCanvas(img) {
-    const canvas = document.getElementById('measureCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    // UI 상태 변경
-    document.getElementById('measureMenu').style.display = 'none';
-    document.getElementById('stepBar').style.display = 'block';
-    canvas.style.display = 'block';
-    
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight; // 전체 화면 사용
-    
-    // 이미지 비율 맞춰 그리기
-    const hRatio = canvas.width / img.width;
-    const vRatio = canvas.height / img.height;
-    const ratio = Math.min(hRatio, vRatio);
-    const cx = (canvas.width - img.width*ratio) / 2;
-    const cy = (canvas.height - img.height*ratio) / 2;
-    
-    // 배경 이미지 저장 (다시 그리기용)
+    const canvas = document.getElementById('measureCanvas'); const ctx = canvas.getContext('2d');
+    document.getElementById('measureMenu').style.display = 'none'; document.getElementById('stepBar').style.display = 'block';
+    canvas.style.display = 'block'; canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const hRatio = canvas.width / img.width; const vRatio = canvas.height / img.height; const ratio = Math.min(hRatio, vRatio);
+    const cx = (canvas.width - img.width*ratio) / 2; const cy = (canvas.height - img.height*ratio) / 2;
     window.bgImage = { img, cx, cy, w: img.width*ratio, h: img.height*ratio };
-    redrawCanvas();
-
-    // 상태 초기화: 1단계(기준 설정) 진입
-    measureState = 1;
-    refLine = null; 
-    targetLine = null;
-    updateStepUI();
-    
-    initTouchDraw(canvas);
+    redrawCanvas(); measureState = 1; refLine = null; targetLine = null; updateStepUI(); initTouchDraw(canvas);
 }
-
 function updateStepUI() {
-    const text = document.getElementById('stepText');
-    const btn = document.getElementById('stepActionBtn');
-    
-    if (measureState === 1) {
-        // 1단계: 기준 잡기
-        const refName = measureRefType === 'card' ? '신용카드 긴 면' : '500원 동전 지름';
-        text.innerHTML = `<b>1단계</b>: <span style='color:#4CAF50'>${refName}</span>에 선을 맞추세요`;
-        text.style.color = '#fff';
-        btn.textContent = "기준 등록";
-        btn.style.display = 'block';
-    } else if (measureState === 2) {
-        // 2단계: 측정 하기
-        text.innerHTML = `<b>2단계</b>: <span style='color:#e94560'>측정할 물체</span>에 선을 그으세요`;
-        btn.style.display = 'none'; // 드래그 끝나면 자동 결과 표시
-    }
+    const text = document.getElementById('stepText'); const btn = document.getElementById('stepActionBtn');
+    if (measureState === 1) { text.innerHTML = `<b>1단계</b>: <span style='color:#4CAF50'>${measureRefType === 'card' ? '신용카드 긴 면' : '500원 동전 지름'}</span>에 선을 맞추세요`; text.style.color = '#fff'; btn.textContent = "기준 등록"; btn.style.display = 'block'; } 
+    else if (measureState === 2) { text.innerHTML = `<b>2단계</b>: <span style='color:#e94560'>측정할 물체</span>에 선을 그으세요`; btn.style.display = 'none'; }
 }
-
-// 캔버스 다시 그리기 (배경 + 선들)
 function redrawCanvas() {
-    const canvas = document.getElementById('measureCanvas');
-    const ctx = canvas.getContext('2d');
-    ctx.clearRect(0,0,canvas.width, canvas.height);
-    
-    // 배경
-    if(window.bgImage) {
-        const {img, cx, cy, w, h} = window.bgImage;
-        ctx.drawImage(img, 0, 0, img.width, img.height, cx, cy, w, h);
-    }
-    
-    // 기준선 (파란색)
-    if (refLine) {
-        drawLine(ctx, refLine.start, refLine.end, '#4CAF50', '1단계: 기준');
-    }
-    
-    // 측정선 (붉은색)
-    if (targetLine) {
-        drawLine(ctx, targetLine.start, targetLine.end, '#e94560', '2단계: 대상');
-    }
+    const canvas = document.getElementById('measureCanvas'); const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width, canvas.height);
+    if(window.bgImage) { const {img, cx, cy, w, h} = window.bgImage; ctx.drawImage(img, 0, 0, img.width, img.height, cx, cy, w, h); }
+    if (refLine) drawLine(ctx, refLine.start, refLine.end, '#4CAF50', '1단계: 기준');
+    if (targetLine) drawLine(ctx, targetLine.start, targetLine.end, '#e94560', '2단계: 대상');
 }
-
 function drawLine(ctx, start, end, color, label) {
-    ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-    ctx.lineTo(end.x, end.y);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    
-    // 양 끝점
-    ctx.fillStyle = 'white';
-    ctx.beginPath(); ctx.arc(start.x, start.y, 5, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(end.x, end.y, 5, 0, Math.PI*2); ctx.fill();
-    
-    // 라벨
-    if(label) {
-        ctx.fillStyle = color;
-        ctx.font = "bold 14px sans-serif";
-        ctx.fillText(label, start.x, start.y - 10);
-    }
+    ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.stroke();
+    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(start.x, start.y, 5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(end.x, end.y, 5, 0, Math.PI*2); ctx.fill();
+    if(label) { ctx.fillStyle = color; ctx.font = "bold 14px sans-serif"; ctx.fillText(label, start.x, start.y - 10); }
 }
-
 function initTouchDraw(canvas) {
-    let startPos = null;
-    let isDrawing = false;
-
-    canvas.ontouchstart = (e) => {
-        if(measureState > 2) return; // 결과 나온 후엔 터치 막음
-        isDrawing = true;
-        const t = e.touches[0];
-        startPos = { x: t.clientX, y: t.clientY };
-    };
-
-    canvas.ontouchmove = (e) => {
-        if (!isDrawing) return;
-        e.preventDefault();
-        const t = e.touches[0];
-        const currentPos = { x: t.clientX, y: t.clientY };
-        
-        // 실시간 드래그 보여주기
-        if (measureState === 1) refLine = { start: startPos, end: currentPos };
-        else if (measureState === 2) targetLine = { start: startPos, end: currentPos };
-        
-        redrawCanvas();
-    };
-
-    canvas.ontouchend = (e) => {
-        if (!isDrawing) return;
-        isDrawing = false;
-        
-        // 드래그가 끝나면
-        if (measureState === 2) {
-            // 2단계에선 드래그 끝나자마자 결과 계산
-            calculateFinalResult();
-        }
-    };
+    let startPos = null; let isDrawing = false;
+    canvas.ontouchstart = (e) => { if(measureState > 2) return; isDrawing = true; const t = e.touches[0]; startPos = { x: t.clientX, y: t.clientY }; };
+    canvas.ontouchmove = (e) => { if (!isDrawing) return; e.preventDefault(); const t = e.touches[0]; const currentPos = { x: t.clientX, y: t.clientY }; if (measureState === 1) refLine = { start: startPos, end: currentPos }; else if (measureState === 2) targetLine = { start: startPos, end: currentPos }; redrawCanvas(); };
+    canvas.ontouchend = (e) => { if (!isDrawing) return; isDrawing = false; if (measureState === 2) calculateFinalResult(); };
 }
-
-// [버튼 클릭] 1단계 완료 -> 기준 비율 계산
 function confirmReference() {
-    if (!refLine) { alert("먼저 신용카드(또는 동전) 위에 선을 그어주세요."); return; }
-    
-    // 픽셀 거리 계산
+    if (!refLine) { alert("선을 그어주세요."); return; }
     const distPx = Math.sqrt(Math.pow(refLine.end.x - refLine.start.x, 2) + Math.pow(refLine.end.y - refLine.start.y, 2));
-    
-    if (distPx < 10) { alert("선이 너무 짧습니다. 다시 그어주세요."); return; }
-    
-    // 비율 계산 (픽셀 / 실제mm)
+    if (distPx < 10) { alert("너무 짧습니다."); return; }
     const realSize = measureRefType === 'card' ? REF_SIZE.card : REF_SIZE.coin;
-    pixelsPerMM = distPx / realSize;
-    
-    // 2단계로 이동
-    measureState = 2;
-    updateStepUI();
-    alert("기준이 설정되었습니다.\n이제 재고 싶은 물건 위에 선을 그으세요.");
+    pixelsPerMM = distPx / realSize; measureState = 2; updateStepUI();
 }
-
-// [자동 실행] 2단계 완료 -> 결과 표시
 function calculateFinalResult() {
     if (!targetLine || !pixelsPerMM) return;
-    
     const distPx = Math.sqrt(Math.pow(targetLine.end.x - targetLine.start.x, 2) + Math.pow(targetLine.end.y - targetLine.start.y, 2));
-    
-    // 실제 길이 계산
     const realMM = distPx / pixelsPerMM;
-    
-    // 결과 표시
-    measureState = 3;
-    document.getElementById('stepBar').style.display = 'none';
-    document.getElementById('finalResult').style.display = 'block';
-    document.getElementById('resultValue').textContent = realMM.toFixed(1) + ' mm';
+    measureState = 3; document.getElementById('stepBar').style.display = 'none'; document.getElementById('finalResult').style.display = 'block'; document.getElementById('resultValue').textContent = realMM.toFixed(1) + ' mm';
 }
-
 function resetMeasure() {
-    document.getElementById('measureMenu').style.display = 'block';
-    document.getElementById('measureCanvas').style.display = 'none';
-    document.getElementById('stepBar').style.display = 'none';
-    document.getElementById('finalResult').style.display = 'none';
-    measureState = 0;
-    refLine = null; targetLine = null;
+    document.getElementById('measureMenu').style.display = 'block'; document.getElementById('measureCanvas').style.display = 'none'; document.getElementById('stepBar').style.display = 'none'; document.getElementById('finalResult').style.display = 'none';
+    measureState = 0; refLine = null; targetLine = null;
 }
