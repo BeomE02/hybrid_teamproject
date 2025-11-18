@@ -3,22 +3,23 @@
 // ===========================
 let currentMode = 'level';
 
-// 보정값 (사용자가 0점을 잡은 위치)
+// 보정값
 let calibration = { x: 0, y: 0 };
-
-// 센서 원본값 저장용 (보정 버튼 눌렀을 때 쓰기 위해)
 let rawSensor = { x: 0, y: 0 };
 
-// 측정 관련 변수
+// 측정 관련
 let measureState = 0; 
 let measureRefType = 'card'; 
 let pixelsPerMM = 0; 
 let refLine = null; 
 let targetLine = null;
 
-// 수평계 알림 설정
+// 알림 설정
 let isTiltAlarmOn = false;
-let lastVibrateTime = 0;
+let lastAlertTime = 0;
+
+// 오디오 컨텍스트
+let audioCtx = null;
 
 const REF_SIZE = { card: 85.60, coin: 26.50 };
 
@@ -26,9 +27,15 @@ const REF_SIZE = { card: 85.60, coin: 26.50 };
 // 1. 초기화
 // ===========================
 function requestPermissions() {
+    // 오디오 준비
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
     if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
         alert("⚠️ 보안 연결(HTTPS)이 필요합니다.");
     }
+    
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
         DeviceOrientationEvent.requestPermission()
             .then(res => {
@@ -52,19 +59,50 @@ function startSensors() {
 }
 
 // ===========================
-// 2. 수평계 기능 (0점 보정 + 알림)
+// 소리 재생 함수 (비프음)
+// ===========================
+function playBeep() {
+    if (!audioCtx) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    osc.type = 'sine'; 
+    osc.frequency.value = 600; // 약간 낮은 톤으로 변경 (더 잘 들림)
+    gainNode.gain.value = 0.1; 
+
+    osc.start();
+    setTimeout(() => { osc.stop(); }, 100);
+}
+
+// ===========================
+// 2. 수평계 기능 (진동 + 화면 깜빡임)
 // ===========================
 function toggleTiltAlarm() {
     isTiltAlarmOn = !isTiltAlarmOn;
     const btn = document.getElementById('tiltAlarmBtn');
+    
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+
     if (isTiltAlarmOn) {
         btn.textContent = "⚠️ 알림 켜짐";
         btn.classList.add('on');
-        // 켜졌다는 신호
-        if(navigator.vibrate) navigator.vibrate(50);
+        
+        // [테스트] 버튼 누르는 순간 강제 진동 (작동 확인용)
+        // 안드로이드는 배열([200])을 더 잘 인식함
+        if(navigator.vibrate) navigator.vibrate([200]); 
+        playBeep();
+        
     } else {
         btn.textContent = "🔕 알림 꺼짐";
         btn.classList.remove('on');
+        // 끄면 화면 색상 복구
+        document.body.style.backgroundColor = '#1a1a2e';
     }
 }
 
@@ -74,75 +112,67 @@ function handleMotion(event) {
     let acc = event.accelerationIncludingGravity;
     if (!acc) return;
 
-    // 1. 원본 데이터 가져오기
-    let x = acc.x; 
-    let y = acc.y;
+    let x = acc.x; let y = acc.y;
 
-    // 2. 기종별 방향 보정 (아이폰 등)
-    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) { 
-        x = -x; 
-        y = -y; 
-    }
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) { x = -x; y = -y; }
 
-    // 3. [중요] 나중에 0점 잡으려고 원본 값 저장해두기
-    rawSensor.x = x;
-    rawSensor.y = y;
+    rawSensor.x = x; rawSensor.y = y;
+    x -= calibration.x; y -= calibration.y;
 
-    // 4. 보정값 적용 (현재값 - 기준값)
-    x -= calibration.x; 
-    y -= calibration.y;
-
-    // 5. 화면 표시 로직
     const limit = 100;
-    let moveX = x * 10; 
-    let moveY = y * -10;
-    
+    let moveX = x * 10; let moveY = y * -10;
     const dist = Math.sqrt(moveX*moveX + moveY*moveY);
-    if (dist > limit) { 
-        moveX = (moveX/dist)*limit; 
-        moveY = (moveY/dist)*limit; 
-    }
+    if (dist > limit) { moveX = (moveX/dist)*limit; moveY = (moveY/dist)*limit; }
     
     const bubble = document.getElementById('bubble');
     let isLevel = false;
 
     if(bubble) {
         bubble.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
-        
-        // 수평 판별 (오차범위 0.5)
         if(Math.abs(x) < 0.5 && Math.abs(y) < 0.5) {
             bubble.classList.add('green');
             isLevel = true;
+            // 수평 맞으면 배경색 정상 복구
+            if(isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e';
         } else {
             bubble.classList.remove('green');
             isLevel = false;
         }
     }
-    
-    // 각도 표시
     document.getElementById('tiltAngle').textContent = Math.min(Math.sqrt(x*x+y*y)*5, 90).toFixed(1) + '°';
 
-    // 경고 진동 (버튼 켜짐 + 수평 아님)
+    // [핵심 수정] 경고 알림 (진동 + 소리 + 화면 깜빡임)
     if (isTiltAlarmOn && !isLevel) {
         const now = Date.now();
-        if (now - lastVibrateTime > 300) { // 0.3초 간격
-            if(navigator.vibrate) navigator.vibrate(100);
-            lastVibrateTime = now;
+        // 0.4초 간격으로 알림
+        if (now - lastAlertTime > 400) {
+            
+            // 1. 진동 (배열 패턴 사용: [진동시간])
+            if(navigator.vibrate) navigator.vibrate([100]);
+            
+            // 2. 소리
+            playBeep();
+            
+            // 3. [추가] 화면 깜빡임 (붉은색) - 진동이 안 느껴져도 눈으로 확인 가능
+            document.body.style.backgroundColor = '#4a1a1a'; // 어두운 빨강
+            setTimeout(() => {
+                // 0.1초 뒤에 원래 색으로 복귀 시도 (깜빡임 효과)
+                if(isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e';
+            }, 100);
+
+            lastAlertTime = now;
         }
     }
 }
 
-// [수정된 부분] 실제 0점 보정 함수
 function calibrateLevel() {
-    // 현재 센서의 원본 값을 기준점(calibration)으로 설정
     calibration.x = rawSensor.x;
     calibration.y = rawSensor.y;
-    
     alert('현재 기울기를 0점으로 설정했습니다.');
 }
 
 // ===========================
-// 3. 나침반 기능
+// 3. 나침반 기능 (유지)
 // ===========================
 function drawCompassTicks() {
     const dial = document.getElementById('compassDial');
@@ -196,7 +226,7 @@ function handleOrientation(event) {
 }
 
 // ===========================
-// 4. 탭 전환
+// 4. 탭 전환 (유지)
 // ===========================
 function switchTab(mode, btn) {
     currentMode = mode;
@@ -208,7 +238,7 @@ function switchTab(mode, btn) {
 }
 
 // ===========================
-// 5. 길이 측정
+// 5. 길이 측정 (유지)
 // ===========================
 function startMeasure(type) { measureRefType = type; document.getElementById('cameraInput').click(); }
 function handleImageUpload(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(evt) { const img = new Image(); img.onload = function() { setupCanvas(img); }; img.src = evt.target.result; }; reader.readAsDataURL(file); }
