@@ -5,91 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1, viewport-fit=cover">
     <title>스마트 측정 도구</title>
     <style>
-        /* 기본 설정 */
+        /* 기본 설정 (기존과 동일) */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-touch-callout: none; user-select: none; -webkit-tap-highlight-color: transparent; }
-        
         body {
             font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: #1a1a2e;
-            color: white;
-            /* 모바일 주소창 문제 해결을 위한 설정 */
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%; /* 구형 브라우저용 */
-            height: 100dvh; /* 신형 브라우저용 (주소창 제외한 실제 높이) */
-            overflow: hidden;
+            background: #1a1a2e; color: white;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100dvh; overflow: hidden;
         }
-
-        /* 전체 레이아웃: 상단-중단-하단(메뉴) */
-        .container { 
-            width: 100%;
-            height: 100%;
-            display: flex; 
-            flex-direction: column; 
-        }
+        .container { width: 100%; height: 100%; display: flex; flex-direction: column; }
         
-        /* 중앙 콘텐츠 영역 (남는 공간 모두 차지 + 내부 스크롤) */
-        .screen { 
-            flex: 1; 
-            display: none; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            padding: 20px; 
-            position: relative; 
-            overflow-y: auto; /* 내용이 많으면 내부에서만 스크롤 */
-            width: 100%;
-        }
+        /* 화면 공통 */
+        .screen { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; position: relative; overflow: hidden; width: 100%; }
         .active-screen { display: flex; }
 
-        /* 하단 탭 메뉴 (높이 고정 + 아이폰 하단 여백 대응) */
-        .tab-menu { 
-            display: flex; 
-            background: #16213e; 
-            height: 60px; /* 기본 높이 */
-            flex-shrink: 0; /* 절대 줄어들지 않음 */
-            
-            /* 아이폰 X 이상 홈 바(Home Bar) 여백 대응 */
-            padding-bottom: env(safe-area-inset-bottom); 
-            height: calc(60px + env(safe-area-inset-bottom));
-            z-index: 100;
-        }
-        
-        .tab { 
-            flex: 1; 
-            text-align: center; 
-            border: none; 
-            background: transparent; 
-            color: #8d93ab; 
-            font-size: 16px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            /* 아이폰 하단 여백 제외하고 버튼 중앙 정렬 */
-            padding-bottom: env(safe-area-inset-bottom);
-            height: 60px; /* 버튼 자체 높이 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
+        /* 탭 메뉴 */
+        .tab-menu { display: flex; background: #16213e; height: 60px; flex-shrink: 0; padding-bottom: env(safe-area-inset-bottom); height: calc(60px + env(safe-area-inset-bottom)); z-index: 100; }
+        .tab { flex: 1; text-align: center; border: none; background: transparent; color: #8d93ab; font-size: 16px; font-weight: bold; cursor: pointer; padding-bottom: env(safe-area-inset-bottom); height: 60px; display: flex; align-items: center; justify-content: center; }
         .tab.active { background: #0f3460; color: #e94560; border-top: 3px solid #e94560; }
-        
-        /* 1. 수평계 UI */
+
+        /* 수평계, 나침반 스타일 (기존 유지) */
         .level-wrap { position: relative; width: min(260px, 70vw); height: min(260px, 70vw); margin-top: -20px; }
         .level-outer { width: 100%; height: 100%; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
         .level-center-mark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 50px; height: 50px; border: 2px solid #fff; border-radius: 50%; z-index: 2; }
         #bubble { width: 40px; height: 40px; background: #e94560; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: transform 0.1s linear; z-index: 1; box-shadow: 0 0 15px #e94560; }
         #bubble.green { background: #4CAF50; box-shadow: 0 0 20px #4CAF50; }
-        
         .angle-text { font-size: 40px; font-weight: bold; margin-top: 30px; }
         .angle-sub { font-size: 16px; color: #aaa; margin-top: 10px; }
 
-        /* 2. 길이 측정 UI */
-        .camera-btn { 
-            background: #0f3460; border: 2px solid #e94560; color: white; padding: 20px; width: 100%; border-radius: 15px; margin-bottom: 15px; text-align: left; display: flex; align-items: center;
-        }
+        .compass-wrap { width: min(280px, 75vw); height: min(280px, 75vw); position: relative; background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Compass_Card.png/600px-Compass_Card.png'); background-size: cover; border-radius: 50%; transition: transform 0.1s linear; box-shadow: 0 0 30px rgba(255,255,255,0.1); }
+        .fixed-marker { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 6px; height: 25px; background: #e94560; z-index: 10; border-radius: 3px; box-shadow: 0 0 10px #e94560;}
+        .compass-value { font-size: 50px; font-weight: bold; margin-top: 30px; }
+        .compass-desc { color: #888; margin-bottom: 20px; font-size: 14px; }
+
+        /* [중요] 길이 측정 UI 개선 */
+        .camera-btn { background: #0f3460; border: 2px solid #e94560; color: white; padding: 20px; width: 100%; border-radius: 15px; margin-bottom: 15px; text-align: left; display: flex; align-items: center; }
         .camera-btn i { font-size: 24px; margin-right: 15px; }
         .camera-btn div { display: flex; flex-direction: column; }
         .camera-btn span { font-size: 18px; font-weight: bold; }
@@ -97,21 +46,24 @@
 
         #measureCanvas { display: none; position: absolute; top: 0; left: 0; z-index: 10; background: black; }
         
-        #resultBox {
-            display: none; position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.9); border: 2px solid #e94560; padding: 20px; border-radius: 15px;
-            text-align: center; z-index: 20; width: 80%;
+        /* 측정 단계 안내바 */
+        #stepBar {
+            display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.85); padding: 15px 25px; border-radius: 30px; z-index: 20;
+            width: 90%; text-align: center; border: 1px solid #444;
         }
-        #resultValue { font-size: 36px; font-weight: bold; color: #fff; display: block; margin: 10px 0;}
-        #resetMeasureBtn { background: #444; border: none; color: white; padding: 10px 20px; border-radius: 5px; font-size: 16px; }
+        #stepText { font-size: 16px; font-weight: bold; display: block; margin-bottom: 10px; }
+        #stepActionBtn { background: #e94560; border: none; color: white; padding: 8px 20px; border-radius: 20px; font-size: 14px; font-weight: bold; }
+        #stepResetBtn { background: #555; border: none; color: white; padding: 8px 15px; border-radius: 20px; font-size: 14px; margin-left: 10px; }
 
-        /* 3. 나침반 UI */
-        .compass-wrap { width: min(280px, 75vw); height: min(280px, 75vw); position: relative; background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Compass_Card.png/600px-Compass_Card.png'); background-size: cover; border-radius: 50%; transition: transform 0.1s linear; box-shadow: 0 0 30px rgba(255,255,255,0.1); }
-        .fixed-marker { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); width: 6px; height: 25px; background: #e94560; z-index: 10; border-radius: 3px; box-shadow: 0 0 10px #e94560;}
-        .compass-value { font-size: 50px; font-weight: bold; margin-top: 30px; }
-        .compass-desc { color: #888; margin-bottom: 20px; font-size: 14px; }
+        /* 결과 표시 */
+        #finalResult {
+            display: none; position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.9); padding: 20px 40px; border-radius: 15px; z-index: 20;
+            text-align: center; border: 2px solid #e94560;
+        }
 
-        /* iOS 권한 오버레이 */
+        /* iOS 권한 */
         #startOverlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
         .big-start-btn { padding: 20px 50px; font-size: 22px; background: #e94560; color: white; border: none; border-radius: 50px; margin-top: 30px; font-weight: bold; box-shadow: 0 0 20px rgba(233, 69, 96, 0.5); }
         .action-btn { background: #0f3460; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: bold; margin: 5px; }
@@ -120,7 +72,7 @@
 <body>
     <div id="startOverlay">
         <h1 style="font-size: 24px; margin-bottom: 20px;">⚠️ 시작하기</h1>
-        <p style="color: #ccc;">아이폰/안드로이드 센서 사용을 위해<br>아래 버튼을 꼭 눌러주세요.</p>
+        <p style="color: #ccc;">센서 권한을 허용해야<br>정상 작동합니다.</p>
         <button class="big-start-btn" onclick="requestPermissions()">앱 시작하기</button>
     </div>
 
@@ -142,43 +94,51 @@
         <div id="measureScreen" class="screen">
             <div id="measureMenu" style="width: 100%; max-width: 400px;">
                 <h2 style="text-align: center; margin-bottom: 10px;">길이 측정</h2>
-                <p style="text-align: center; margin-bottom: 30px; color: #888;">기준 물체를 선택하고 사진을 찍으세요</p>
+                <p style="text-align: center; margin-bottom: 30px; color: #888;">
+                    정확한 측정을 위해<br>
+                    <b>2단계(기준설정 → 측정)</b>로 진행됩니다.
+                </p>
                 
                 <button class="camera-btn" onclick="startMeasure('card')">
                     <i>💳</i>
                     <div>
-                        <span>신용카드 기준 측정</span>
-                        <small>카드를 옆에 두고 촬영하세요</small>
+                        <span>신용카드 기준 (85.6mm)</span>
+                        <small>신용카드와 함께 사진을 찍으세요</small>
                     </div>
                 </button>
                 <button class="camera-btn" onclick="startMeasure('coin')">
                     <i>🪙</i>
                     <div>
-                        <span>500원 동전 기준 측정</span>
-                        <small>동전을 옆에 두고 촬영하세요</small>
+                        <span>500원 동전 기준 (26.5mm)</span>
+                        <small>500원 동전과 함께 사진을 찍으세요</small>
                     </div>
                 </button>
             </div>
 
             <canvas id="measureCanvas"></canvas>
-            <div id="resultBox">
-                <h3 style="color:#ccc; font-size:14px; margin-bottom:5px;">📏 측정 결과 (대략적)</h3>
-                <div id="resultValue">0 mm</div>
-                <button id="resetMeasureBtn" onclick="closeMeasure()">다시하기</button>
+            
+            <div id="stepBar">
+                <span id="stepText" style="color: #4CAF50;">1단계: 신용카드 길이를 표시하세요</span>
+                <div style="display:flex; justify-content:center;">
+                    <button id="stepActionBtn" onclick="confirmReference()">기준 등록 완료</button>
+                    <button id="stepResetBtn" onclick="resetMeasure()">처음부터</button>
+                </div>
             </div>
-            <div id="measureGuide" style="display:none; position: absolute; top: 20px; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 20px; z-index: 20;">
-                사진 위를 드래그하여 선을 그으세요
+
+            <div id="finalResult">
+                <div style="font-size: 14px; color:#ccc;">측정 결과</div>
+                <div id="resultValue" style="font-size: 42px; font-weight: bold; margin: 10px 0; color: #fff;">0 mm</div>
+                <button class="action-btn" onclick="resetMeasure()">다시 측정하기</button>
             </div>
         </div>
 
         <div id="angleScreen" class="screen">
             <h2 style="margin-bottom: 10px;">나침반</h2>
             <p class="compass-desc">폰을 하늘 방향(수평)으로 들고 계세요</p>
-            
             <div style="position: relative; margin: 20px 0;">
-                <div class="fixed-marker"></div> <div class="compass-wrap" id="compassRotator"></div>
+                <div class="fixed-marker"></div>
+                <div class="compass-wrap" id="compassRotator"></div>
             </div>
-
             <div class="compass-value" id="compassValue">0°</div>
             <div id="directionText" style="font-size: 24px; color: #e94560; font-weight: bold;">N</div>
         </div>
