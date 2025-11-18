@@ -17,19 +17,21 @@ let isTiltAlarmOn = false;
 let lastAlertTime = 0;
 let audioCtx = null;
 
-// GPS
+// GPS & 지도
 let myLat = 0, myLng = 0;
 let targetLat = null, targetLng = null;
 let watchId = null;
 let map = null;
 let mapMarker = null;
 
-// [SOS 관련]
+// SOS
 let flashStream = null;
-let sirenOsc = null;
-let sirenInterval = null;
-let sosInterval = null;
+let isFlashOn = false;
+let isSirenOn = false;
 let isSOSOn = false;
+let sirenOsc = null;
+let sirenGain = null;
+let sosInterval = null;
 let emergencyMode = null;
 let tapCount = 0;
 let tapTimer = null;
@@ -50,14 +52,13 @@ function requestPermissions() {
         DeviceOrientationEvent.requestPermission()
             .then(res => {
                 if (res === 'granted') { startAppSystem(); }
-                else { alert('권한이 거부되었습니다.'); hideOverlay(); }
+                else { alert('센서 권한이 거부되었습니다.'); hideOverlay(); }
             })
-            .catch(e => { alert("오류: " + e); startAppSystem(); });
+            .catch(e => { alert("권한 오류: " + e); startAppSystem(); });
     } else { 
         startAppSystem(); 
     }
     
-    // 3연타 리스너
     const overlay = document.getElementById('emergencyOverlay');
     overlay.addEventListener('touchstart', handleEmergencyTap);
     overlay.addEventListener('click', handleEmergencyTap);
@@ -84,166 +85,127 @@ function startSensors() {
 
 function startGPS() {
     if (navigator.geolocation) {
+        const infoBox = document.getElementById('coordInfo');
+        if(infoBox) infoBox.textContent = "GPS 신호 수신 중...";
+
         watchId = navigator.geolocation.watchPosition(
             (pos) => {
-                const { latitude, longitude, speed } = pos.coords;
+                const { latitude, longitude, speed, accuracy } = pos.coords;
                 myLat = latitude; myLng = longitude;
-                updateGPSUI(); updateSpeedometer(speed); updateMapMarker(latitude, longitude);
+                updateGPSUI();
+                updateSpeedometer(speed);
+                updateMapMarker(latitude, longitude);
+                
+                if(infoBox) infoBox.textContent = `위도:${latitude.toFixed(4)}, 경도:${longitude.toFixed(4)} (오차:${Math.round(accuracy)}m)`;
             },
-            (err) => console.log("GPS Error"),
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 1000 }
+            (err) => {
+                console.warn("GPS Error:", err);
+                if(infoBox) infoBox.textContent = "GPS 신호 약함 (실외로 이동하세요)";
+            },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
         );
     }
 }
 
 // ===========================
-// [핵심] 비상 기능
+// 5. 탭 전환 (지도 강제 새로고침)
 // ===========================
+function switchTab(mode, btn) {
+    currentMode = mode;
+    
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    
+    if (mode === 'level') document.getElementById('levelScreen').classList.add('active-screen');
+    if (mode === 'measure') document.getElementById('measureScreen').classList.add('active-screen');
+    if (mode === 'angle') { document.getElementById('angleScreen').classList.add('active-screen'); drawCompassTicks(); }
+    if (mode === 'sos') document.getElementById('sosScreen').classList.add('active-screen');
+    
+    // [지도 탭 처리]
+    if (mode === 'gps') {
+        document.getElementById('gpsScreen').classList.add('active-screen');
+        
+        // 1. 지도 생성 (없으면)
+        initMap();
+        
+        // 2. 지도 크기 재계산 (중요)
+        setTimeout(() => {
+            if(map) {
+                map.invalidateSize();
+                // 내 위치가 있으면 거기로 이동
+                if(myLat !== 0) map.setView([myLat, myLng], 15);
+            }
+        }, 300);
+    }
 
+    if(btn) btn.classList.add('active');
+}
+
+// ===========================
+// SOS & 사이렌
+// ===========================
 function handleEmergencyTap(e) {
-    e.preventDefault();
-    tapCount++;
+    e.preventDefault(); tapCount++;
     if (tapTimer) clearTimeout(tapTimer);
     tapTimer = setTimeout(() => { tapCount = 0; }, 400);
-    
-    if (tapCount >= 3) {
-        emergencyStop();
-        tapCount = 0;
-    }
+    if (tapCount >= 3) { emergencyStop(); tapCount = 0; }
 }
 
 async function triggerEmergency(mode) {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') await audioCtx.resume();
-
-    emergencyStop(); 
+    emergencyStop();
     emergencyMode = mode;
     const overlay = document.getElementById('emergencyOverlay');
     overlay.classList.add('active');
-    
-    if (mode === 'flash') {
-        // 1. 손전등 (화면 흰색 + 플래시)
-        overlay.style.backgroundColor = 'white';
-        await setHardwareFlash(true);
-    } 
+    if (mode === 'flash') { overlay.style.backgroundColor = 'white'; await setHardwareFlash(true); } 
     else if (mode === 'siren') {
-        // 2. 사이렌 (소리 + 화면 깜빡임 + 플래시)
-        startSirenSound(); 
-        let toggle = false;
-        sirenInterval = setInterval(() => {
-            toggle = !toggle;
-            overlay.style.backgroundColor = toggle ? '#ff0000' : '#0000ff'; 
-            setHardwareFlash(toggle);
-        }, 300);
+        startSirenSound(); let toggle = false;
+        sirenInterval = setInterval(() => { toggle = !toggle; overlay.style.backgroundColor = toggle ? '#ff0000' : '#0000ff'; setHardwareFlash(toggle); }, 300);
     } 
     else if (mode === 'sos') {
-        // 3. SOS (화면 검정 + 플래시 패턴)
-        overlay.style.backgroundColor = 'black'; // 화면은 검게
-        isSOSOn = true;
-        runSOSPattern();
+        overlay.style.backgroundColor = 'black'; isSOSOn = true; runSOSPattern();
     }
 }
-
 function emergencyStop() {
-    isSOSOn = false; 
-    if (sirenInterval) clearInterval(sirenInterval);
-    stopSirenSound();
-    setHardwareFlash(false);
-    
-    const overlay = document.getElementById('emergencyOverlay');
-    overlay.classList.remove('active');
-    overlay.style.backgroundColor = 'black'; 
-    emergencyMode = null;
-    
-    // 화면 플래시도 끄기
-    const screenFlash = document.getElementById('screenFlashOverlay');
-    screenFlash.classList.remove('active');
+    isSOSOn = false; if (sirenInterval) clearInterval(sirenInterval); stopSirenSound(); setHardwareFlash(false);
+    const overlay = document.getElementById('emergencyOverlay'); overlay.classList.remove('active'); overlay.style.backgroundColor = 'black'; emergencyMode = null;
+    const screenFlash = document.getElementById('screenFlashOverlay'); screenFlash.classList.remove('active');
 }
-
-// [빠른 SOS 패턴]
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-
 async function runSOSPattern() {
-    // 속도: 기존보다 2배 빠르게 (0.1초 단위)
-    const DOT = 100;
-    const DASH = 300;
-    const GAP = 100;
-    const LETTER_GAP = 300;
-    const WORD_GAP = 1000;
-
-    const flashPulse = async (duration) => {
-        if (!isSOSOn) return;
-        await setHardwareFlash(true);
-        await sleep(duration);
-        await setHardwareFlash(false);
-    };
-
+    const DOT = 100; const DASH = 300; const GAP = 100; const LETTER_GAP = 300; const WORD_GAP = 1000;
+    const flashPulse = async (duration) => { if (!isSOSOn) return; await setHardwareFlash(true); await sleep(duration); await setHardwareFlash(false); };
     while (isSOSOn) {
-        // S (...)
-        await flashPulse(DOT); await sleep(GAP);
-        await flashPulse(DOT); await sleep(GAP);
-        await flashPulse(DOT); await sleep(LETTER_GAP);
-        if (!isSOSOn) break;
-
-        // O (---)
-        await flashPulse(DASH); await sleep(GAP);
-        await flashPulse(DASH); await sleep(GAP);
-        await flashPulse(DASH); await sleep(LETTER_GAP);
-        if (!isSOSOn) break;
-
-        // S (...)
-        await flashPulse(DOT); await sleep(GAP);
-        await flashPulse(DOT); await sleep(GAP);
-        await flashPulse(DOT); await sleep(WORD_GAP);
+        await flashPulse(DOT); await sleep(GAP); await flashPulse(DOT); await sleep(GAP); await flashPulse(DOT); await sleep(LETTER_GAP); if (!isSOSOn) break;
+        await flashPulse(DASH); await sleep(GAP); await flashPulse(DASH); await sleep(GAP); await flashPulse(DASH); await sleep(LETTER_GAP); if (!isSOSOn) break;
+        await flashPulse(DOT); await sleep(GAP); await flashPulse(DOT); await sleep(GAP); await flashPulse(DOT); await sleep(WORD_GAP);
     }
 }
-
 async function setHardwareFlash(on) {
     try {
         if (on) {
-            if (!flashStream) {
-                flashStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-            }
-            const track = flashStream.getVideoTracks()[0];
-            const cap = track.getCapabilities();
+            if (!flashStream) flashStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            const track = flashStream.getVideoTracks()[0]; const cap = track.getCapabilities();
             if (cap.torch) await track.applyConstraints({ advanced: [{ torch: true }] });
         } else {
             if (flashStream) {
-                const track = flashStream.getVideoTracks()[0];
-                const cap = track.getCapabilities();
+                const track = flashStream.getVideoTracks()[0]; const cap = track.getCapabilities();
                 if(cap.torch) await track.applyConstraints({ advanced: [{ torch: false }] });
             }
         }
-    } catch (e) { console.log("Flash error:", e); }
-    
-    // 화면 플래시는 SOS 모드가 아닐 때(손전등/사이렌)만 작동
-    if (emergencyMode !== 'sos') {
-        const screenOverlay = document.getElementById('screenFlashOverlay');
-        if(on) screenOverlay.classList.add('active');
-        else screenOverlay.classList.remove('active');
-    }
+    } catch (e) { console.log("Flash err:", e); }
+    if (emergencyMode !== 'sos') { const screenOverlay = document.getElementById('screenFlashOverlay'); if(on) screenOverlay.classList.add('active'); else screenOverlay.classList.remove('active'); }
 }
-
 function startSirenSound(isBeep = false) {
-    if (sirenOsc) stopSirenSound();
-    sirenOsc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    sirenOsc.connect(gain); gain.connect(audioCtx.destination);
-    
-    sirenOsc.type = 'sawtooth';
-    const now = audioCtx.currentTime;
-    sirenOsc.frequency.setValueAtTime(600, now);
-    sirenOsc.frequency.linearRampToValueAtTime(1200, now + 0.5);
-    sirenOsc.frequency.linearRampToValueAtTime(600, now + 1.0);
-    const lfo = audioCtx.createOscillator(); lfo.type = 'triangle'; lfo.frequency.value = 1.0;
-    const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 600;
-    lfo.connect(lfoGain); lfoGain.connect(sirenOsc.frequency);
-    sirenOsc.start(); lfo.start(); sirenOsc.lfo = lfo; 
-    gain.gain.value = 1.0; 
+    if (sirenOsc) stopSirenSound(); sirenOsc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); sirenOsc.connect(gain); gain.connect(audioCtx.destination);
+    if (isBeep) { sirenOsc.type = 'square'; sirenOsc.frequency.value = 880; } else {
+        sirenOsc.type = 'sawtooth'; const now = audioCtx.currentTime; sirenOsc.frequency.setValueAtTime(600, now); sirenOsc.frequency.linearRampToValueAtTime(1200, now + 0.5); sirenOsc.frequency.linearRampToValueAtTime(600, now + 1.0);
+        const lfo = audioCtx.createOscillator(); lfo.type = 'triangle'; lfo.frequency.value = 1.0; const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 600; lfo.connect(lfoGain); lfoGain.connect(sirenOsc.frequency); lfo.start(); sirenOsc.lfo = lfo;
+    }
+    gain.gain.value = 1.0; sirenOsc.start();
 }
-function stopSirenSound() {
-    if (sirenOsc) { try { sirenOsc.stop(); if(sirenOsc.lfo) sirenOsc.lfo.stop(); } catch(e) {} sirenOsc = null; }
-}
+function stopSirenSound() { if (sirenOsc) { try { sirenOsc.stop(); if(sirenOsc.lfo) sirenOsc.lfo.stop(); } catch(e) {} sirenOsc = null; } }
 
 // ===========================
 // 유틸
@@ -265,17 +227,13 @@ function initMap() {
     if (map) return; 
     map = L.map('map').setView([37.5665, 126.9780], 15);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }).addTo(map);
-    const icon = L.divIcon({
-        className: 'custom-map-marker',
-        html: '<div style="width:15px;height:15px;background:#e94560;border:2px solid white;border-radius:50%;box-shadow:0 0 10px rgba(0,0,0,0.5);"></div>',
-        iconSize: [20, 20]
-    });
+    const icon = L.divIcon({ className: 'custom-map-marker', html: '<div style="width:15px;height:15px;background:#e94560;border:2px solid white;border-radius:50%;box-shadow:0 0 10px rgba(0,0,0,0.5);"></div>', iconSize: [20, 20] });
     mapMarker = L.marker([37.5665, 126.9780], {icon: icon}).addTo(map);
 }
 function updateSpeedometer(speedMPS) {
-    let kmh = 0; if (speedMPS !== null && speedMPS > 0) kmh = (speedMPS * 3.6).toFixed(0); 
+    let kmh = 0;
+    if (speedMPS && speedMPS > 0) { kmh = (speedMPS * 3.6).toFixed(0); }
     document.getElementById('speedValue').textContent = kmh;
-    document.getElementById('coordInfo').textContent = `${myLat.toFixed(5)}, ${myLng.toFixed(5)}`;
 }
 function updateMapMarker(lat, lng) {
     if (!map || !mapMarker) return;
@@ -286,78 +244,43 @@ function updateMapMarker(lat, lng) {
 // 3. 수평계
 // ===========================
 function toggleTiltAlarm() {
-    isTiltAlarmOn = !isTiltAlarmOn;
-    const btn = document.getElementById('tiltAlarmBtn');
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    if (isTiltAlarmOn) {
-        btn.innerHTML = '<span class="material-symbols-rounded">notifications_active</span> 알림 켜짐';
-        btn.classList.add('on');
-        if(navigator.vibrate) navigator.vibrate([200]); playBeep();
-    } else {
-        btn.innerHTML = '<span class="material-symbols-rounded">notifications_off</span> 알림 꺼짐';
-        btn.classList.remove('on');
-        document.body.style.backgroundColor = '#1a1a2e';
-    }
+    isTiltAlarmOn = !isTiltAlarmOn; const btn = document.getElementById('tiltAlarmBtn');
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (isTiltAlarmOn) { btn.innerHTML = '<span class="material-symbols-rounded">notifications_active</span> 알림 켜짐'; btn.classList.add('on'); if(navigator.vibrate) navigator.vibrate([200]); playBeep(); } 
+    else { btn.innerHTML = '<span class="material-symbols-rounded">notifications_off</span> 알림 꺼짐'; btn.classList.remove('on'); document.body.style.backgroundColor = '#1a1a2e'; }
 }
-
 function setLevelMode(mode) {
     levelDisplayMode = mode;
-    document.getElementById('btnModeSurface').classList.remove('active');
-    document.getElementById('btnModeBarH').classList.remove('active');
-    document.getElementById('btnModeBarV').classList.remove('active');
-    const surfaceUI = document.getElementById('surfaceLevel');
-    const barUI = document.getElementById('barLevelContainer');
-    const barWrap = document.getElementById('barLevel');
-    const textUI = document.getElementById('levelModeText');
-    if (mode === 'surface') {
-        document.getElementById('btnModeSurface').classList.add('active');
-        surfaceUI.classList.add('active'); barUI.classList.remove('active');
-        textUI.textContent = "평면 모드 (전체 수평)";
-    } else {
+    document.getElementById('btnModeSurface').classList.remove('active'); document.getElementById('btnModeBarH').classList.remove('active'); document.getElementById('btnModeBarV').classList.remove('active');
+    const surfaceUI = document.getElementById('surfaceLevel'); const barUI = document.getElementById('barLevelContainer'); const barWrap = document.getElementById('barLevel'); const textUI = document.getElementById('levelModeText');
+    if (mode === 'surface') { document.getElementById('btnModeSurface').classList.add('active'); surfaceUI.classList.add('active'); barUI.classList.remove('active'); textUI.textContent = "평면 모드 (전체 수평)"; } 
+    else {
         surfaceUI.classList.remove('active'); barUI.classList.add('active');
-        if (mode === 'bar_h') {
-            document.getElementById('btnModeBarH').classList.add('active');
-            barWrap.classList.remove('vertical-mode'); textUI.textContent = "가로 모드 (X축)";
-        } else {
-            document.getElementById('btnModeBarV').classList.add('active');
-            barWrap.classList.add('vertical-mode'); textUI.textContent = "세로 모드 (Y축)";
-        }
+        if (mode === 'bar_h') { document.getElementById('btnModeBarH').classList.add('active'); barWrap.classList.remove('vertical-mode'); textUI.textContent = "가로 모드 (X축)"; } 
+        else { document.getElementById('btnModeBarV').classList.add('active'); barWrap.classList.add('vertical-mode'); textUI.textContent = "세로 모드 (Y축)"; }
     }
 }
-
 function handleMotion(event) {
     if (currentMode !== 'level') return;
     let acc = event.accelerationIncludingGravity; if (!acc) return;
     let x = acc.x; let y = acc.y;
     if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) { x = -x; y = -y; }
     rawSensor.x = x; rawSensor.y = y; x -= calibration.x; y -= calibration.y;
-
     let isLevel = false; let displayAngle = 0;
-
     if (levelDisplayMode === 'surface') {
         const limit = 100; let moveX = x * 10; let moveY = y * -10;
         if(Math.abs(x) < 0.5 && Math.abs(y) < 0.5) { moveX = 0; moveY = 0; document.getElementById('bubble').classList.add('green'); isLevel = true; } 
         else { document.getElementById('bubble').classList.remove('green'); isLevel = false; const dist = Math.sqrt(moveX*moveX + moveY*moveY); if (dist > limit) { moveX = (moveX/dist)*limit; moveY = (moveY/dist)*limit; } }
-        const bubble = document.getElementById('bubble');
-        bubble.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
-        displayAngle = Math.sqrt(x*x+y*y)*5;
+        const bubble = document.getElementById('bubble'); bubble.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`; displayAngle = Math.sqrt(x*x+y*y)*5;
     } else {
-        const barBubble = document.getElementById('barBubble');
-        let tilt = (levelDisplayMode === 'bar_h') ? x * 5 : y * -5;
-        let barMove = tilt * 5; 
+        const barBubble = document.getElementById('barBubble'); let tilt = (levelDisplayMode === 'bar_h') ? x * 5 : y * -5; let barMove = tilt * 5; 
         if (Math.abs(tilt) < 1.0) { barMove = 0; barBubble.classList.add('green'); isLevel = true; } 
         else { barBubble.classList.remove('green'); isLevel = false; if (barMove > 120) barMove = 120; if (barMove < -120) barMove = -120; }
-        barBubble.style.left = `calc(50% + ${barMove}px)`;
-        displayAngle = Math.abs(tilt);
+        barBubble.style.left = `calc(50% + ${barMove}px)`; displayAngle = Math.abs(tilt);
     }
-
     document.getElementById('tiltAngle').textContent = Math.min(displayAngle, 90).toFixed(1) + '°';
     if(isLevel && isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e';
-    if (isTiltAlarmOn && !isLevel) {
-        const now = Date.now();
-        if (now - lastAlertTime > 400) { if(navigator.vibrate) navigator.vibrate([100]); playBeep(); document.body.style.backgroundColor = '#4a1a1a'; setTimeout(() => { if(isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e'; }, 100); lastAlertTime = now; }
-    }
+    if (isTiltAlarmOn && !isLevel) { const now = Date.now(); if (now - lastAlertTime > 400) { if(navigator.vibrate) navigator.vibrate([100]); playBeep(); document.body.style.backgroundColor = '#4a1a1a'; setTimeout(() => { if(isTiltAlarmOn) document.body.style.backgroundColor = '#1a1a2e'; }, 100); lastAlertTime = now; } }
 }
 function calibrateLevel() { calibration.x = rawSensor.x; calibration.y = rawSensor.y; alert('0점 설정 완료'); }
 
@@ -367,18 +290,12 @@ function calibrateLevel() { calibration.x = rawSensor.x; calibration.y = rawSens
 function saveCurrentLocation() {
     if (myLat === 0 && myLng === 0) { alert("GPS 신호를 기다리는 중입니다..."); return; }
     targetLat = myLat; targetLng = myLng;
-    document.getElementById('btnSaveLoc').style.display = 'none';
-    document.getElementById('gpsInfo').style.display = 'block';
-    document.getElementById('targetArrow').style.display = 'block';
-    document.getElementById('compassArea').classList.add('shrink');
+    document.getElementById('btnSaveLoc').style.display = 'none'; document.getElementById('gpsInfo').style.display = 'block'; document.getElementById('targetArrow').style.display = 'block'; document.getElementById('compassArea').classList.add('shrink');
     alert("현재 위치 저장됨"); updateGPSUI();
 }
 function clearLocation() {
     targetLat = null; targetLng = null;
-    document.getElementById('btnSaveLoc').style.display = 'flex';
-    document.getElementById('gpsInfo').style.display = 'none';
-    document.getElementById('targetArrow').style.display = 'none';
-    document.getElementById('compassArea').classList.remove('shrink');
+    document.getElementById('btnSaveLoc').style.display = 'flex'; document.getElementById('gpsInfo').style.display = 'none'; document.getElementById('targetArrow').style.display = 'none'; document.getElementById('compassArea').classList.remove('shrink');
 }
 function updateGPSUI() {
     if (targetLat === null) return;
@@ -388,10 +305,7 @@ function updateGPSUI() {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     const dist = R * c;
     document.getElementById('gpsDist').textContent = Math.round(dist) + " m";
-    const y = Math.sin(Δλ) * Math.cos(φ2);
-    const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
-    const θ = Math.atan2(y, x);
-    const bearing = (θ * 180 / Math.PI + 360) % 360;
+    const y = Math.sin(Δλ) * Math.cos(φ2); const x = Math.cos(φ1)*Math.sin(φ2) - Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ); const θ = Math.atan2(y, x); const bearing = (θ * 180 / Math.PI + 360) % 360;
     document.getElementById('targetArrow').style.transform = `rotate(${bearing}deg)`;
 }
 function drawCompassTicks() {
@@ -400,11 +314,8 @@ function drawCompassTicks() {
     for (let i = 0; i < 360; i += 2) {
         if (i % 10 === 0) {
             const tick = document.createElement('div'); tick.className = 'tick major'; tick.style.transform = `rotate(${i}deg)`; dial.appendChild(tick);
-            if (i % 90 === 0) {
-                const label = document.createElement('div'); label.className = `tick-label ${i===0 ? 'north' : ''}`; label.textContent = directions[i]; label.style.transform = `translateX(-50%) rotate(${-i}deg)`; const c = document.createElement('div'); c.style.position='absolute'; c.style.width='100%'; c.style.height='100%'; c.style.transform=`rotate(${i}deg)`; c.appendChild(label); dial.appendChild(c);
-            } else if (i % 30 === 0) {
-                const label = document.createElement('div'); label.className = 'tick-label'; label.style.fontSize = '12px'; label.style.top = '10px'; label.textContent = i; const c = document.createElement('div'); c.style.position='absolute'; c.style.width='100%'; c.style.height='100%'; c.style.transform=`rotate(${i}deg)`; c.appendChild(label); dial.appendChild(c);
-            }
+            if (i % 90 === 0) { const label = document.createElement('div'); label.className = `tick-label ${i===0 ? 'north' : ''}`; label.textContent = directions[i]; label.style.transform = `translateX(-50%) rotate(${-i}deg)`; const c = document.createElement('div'); c.style.position='absolute'; c.style.width='100%'; c.style.height='100%'; c.style.transform=`rotate(${i}deg)`; c.appendChild(label); dial.appendChild(c); } 
+            else if (i % 30 === 0) { const label = document.createElement('div'); label.className = 'tick-label'; label.style.fontSize = '12px'; label.style.top = '10px'; label.textContent = i; const c = document.createElement('div'); c.style.position='absolute'; c.style.width='100%'; c.style.height='100%'; c.style.transform=`rotate(${i}deg)`; c.appendChild(label); dial.appendChild(c); }
         } else { const tick = document.createElement('div'); tick.className = 'tick'; tick.style.transform = `rotate(${i}deg)`; dial.appendChild(tick); }
     }
 }
@@ -417,22 +328,8 @@ function handleOrientation(event) {
 }
 
 // ===========================
-// 5. 탭 전환 & 측정
+// 5. 측정 (유지)
 // ===========================
-function switchTab(mode, btn) {
-    currentMode = mode;
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    
-    if (mode === 'level') document.getElementById('levelScreen').classList.add('active-screen');
-    if (mode === 'measure') document.getElementById('measureScreen').classList.add('active-screen');
-    if (mode === 'angle') { document.getElementById('angleScreen').classList.add('active-screen'); drawCompassTicks(); }
-    if (mode === 'gps') { document.getElementById('gpsScreen').classList.add('active-screen'); initMap(); setTimeout(() => { map.invalidateSize(); }, 200); }
-    if (mode === 'sos') document.getElementById('sosScreen').classList.add('active-screen');
-
-    if(btn) btn.classList.add('active');
-}
-
 function startMeasure(type) { measureRefType = type; document.getElementById('cameraInput').click(); }
 function handleImageUpload(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(evt) { const img = new Image(); img.onload = function() { setupCanvas(img); }; img.src = evt.target.result; }; reader.readAsDataURL(file); }
 function setupCanvas(img) { const canvas = document.getElementById('measureCanvas'); const ctx = canvas.getContext('2d'); document.getElementById('measureMenu').style.display = 'none'; document.getElementById('stepBar').style.display = 'block'; canvas.style.display = 'block'; canvas.width = window.innerWidth; canvas.height = window.innerHeight; const hRatio = canvas.width / img.width; const vRatio = canvas.height / img.height; const ratio = Math.min(hRatio, vRatio); const cx = (canvas.width - img.width*ratio) / 2; const cy = (canvas.height - img.height*ratio) / 2; window.bgImage = { img, cx, cy, w: img.width*ratio, h: img.height*ratio }; redrawCanvas(); measureState = 1; refLine = null; targetLine = null; updateStepUI(); initTouchDraw(canvas); }
