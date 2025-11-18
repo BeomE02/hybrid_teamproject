@@ -22,20 +22,19 @@
         .tab { flex: 1; text-align: center; border: none; background: transparent; color: #8d93ab; font-size: 16px; font-weight: bold; cursor: pointer; padding-bottom: env(safe-area-inset-bottom); height: 60px; display: flex; align-items: center; justify-content: center; }
         .tab.active { background: #0f3460; color: #e94560; border-top: 3px solid #e94560; }
 
-        /* [신규] 수평계 모드 선택 버튼 (상단 탭) */
+        /* [수정] 3단계 모드 선택 버튼 */
         .level-mode-tabs {
-            display: flex; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 4px; margin-bottom: 30px;
+            display: flex; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 4px; margin-bottom: 30px; gap: 2px;
         }
         .mode-tab {
-            padding: 8px 20px; border: none; background: transparent; color: #aaa; font-size: 14px; font-weight: bold; cursor: pointer; border-radius: 16px; transition: all 0.2s;
+            padding: 10px 15px; border: none; background: transparent; color: #aaa; font-size: 13px; font-weight: bold; cursor: pointer; border-radius: 16px; transition: all 0.2s;
         }
-        .mode-tab.active { background: #e94560; color: white; shadow: 0 2px 10px rgba(233, 69, 96, 0.4); }
+        .mode-tab.active { background: #e94560; color: white; box-shadow: 0 2px 10px rgba(233, 69, 96, 0.4); }
 
-        /* 알림 버튼 (위치 조정) */
+        /* 알림 버튼 */
         .vibrate-toggle { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #aaa; padding: 8px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer; z-index: 50; transition: all 0.3s; display: flex; align-items: center; gap: 5px; }
         .vibrate-toggle.on { background: rgba(233, 69, 96, 0.2); border-color: #e94560; color: #e94560; box-shadow: 0 0 10px rgba(233, 69, 96, 0.3); animation: pulse-border 2s infinite; }
         @keyframes pulse-border { 0% { border-color: #e94560; } 50% { border-color: transparent; } 100% { border-color: #e94560; } }
-        
         .action-btn { background: #0f3460; color: white; border: none; padding: 12px 24px; border-radius: 25px; font-size: 16px; font-weight: bold; margin: 5px; cursor: pointer;}
 
         /* 1. 원형 수평계 */
@@ -46,18 +45,24 @@
         #bubble { width: 40px; height: 40px; background: #e94560; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); transition: transform 0.1s linear; z-index: 1; box-shadow: 0 0 15px #e94560; }
         #bubble.green { background: #4CAF50; box-shadow: 0 0 20px #4CAF50; }
 
-        /* 2. 막대형 수평계 (회전 가능) */
+        /* 2. 막대형 수평계 (컨테이너) */
         .bar-level-container { display: none; width: 300px; height: 300px; position: relative; align-items: center; justify-content: center; }
         .bar-level-container.active { display: flex; }
         
+        /* 막대 본체 */
         .bar-level-wrap { 
-            position: relative; width: 280px; height: 60px; 
-            background: rgba(255,255,255,0.1); border-radius: 30px; border: 2px solid rgba(255,255,255,0.3);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 부드러운 회전 */
+            position: relative; 
+            width: 280px; height: 60px; 
+            background: rgba(255,255,255,0.1); 
+            border-radius: 30px; 
+            border: 2px solid rgba(255,255,255,0.3);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), width 0.3s, height 0.3s;
         }
         
-        /* 세로 모드일 때 90도 회전 */
-        .bar-level-wrap.vertical { transform: rotate(-90deg); }
+        /* [중요] 세로 모드일 때 CSS로 회전 */
+        .bar-level-wrap.vertical-mode { 
+            transform: rotate(-90deg); 
+        }
 
         .bar-center-lines { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 40px; height: 100%; border-left: 2px solid rgba(255,255,255,0.5); border-right: 2px solid rgba(255,255,255,0.5); z-index: 2; }
         #barBubble { position: absolute; top: 5px; left: 50%; transform: translateX(-50%); width: 50px; height: 46px; border-radius: 23px; background: #e94560; box-shadow: 0 0 15px #e94560; transition: left 0.1s linear, background-color 0.2s; z-index: 1; }
@@ -112,8 +117,9 @@
             <h2 style="margin-bottom: 20px;">수평계</h2>
             
             <div class="level-mode-tabs">
-                <button class="mode-tab active" id="btnModeSurface" onclick="setLevelMode('surface')">원형 (평면)</button>
-                <button class="mode-tab" id="btnModeBar" onclick="setLevelMode('bar')">막대형 (수직)</button>
+                <button class="mode-tab active" id="btnModeSurface" onclick="setLevelMode('surface')">원형</button>
+                <button class="mode-tab" id="btnModeBarH" onclick="setLevelMode('bar_h')">가로 막대</button>
+                <button class="mode-tab" id="btnModeBarV" onclick="setLevelMode('bar_v')">세로 막대</button>
             </div>
 
             <div id="surfaceLevel" class="level-wrap active">
