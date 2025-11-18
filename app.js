@@ -274,4 +274,87 @@ function drawCompassTicks() {
             } else if (i % 30 === 0) {
                 const label = document.createElement('div'); label.className = 'tick-label'; label.style.fontSize = '12px'; label.style.top = '10px';
                 label.textContent = i;
-                const c =
+                const c = document.createElement('div'); c.style.position='absolute'; c.style.width='100%'; c.style.height='100%';
+                c.style.transform=`rotate(${i}deg)`; c.appendChild(label); dial.appendChild(c);
+            }
+        } else {
+            const tick = document.createElement('div'); tick.className = 'tick';
+            tick.style.transform = `rotate(${i}deg)`; dial.appendChild(tick);
+        }
+    }
+}
+function handleOrientation(event) {
+    if (currentMode !== 'angle') return;
+    let h = event.webkitCompassHeading || (event.alpha ? 360 - event.alpha : 0);
+    h = Math.round(h);
+    document.getElementById('compassContainer').style.transform = `rotate(${-h}deg)`;
+    document.getElementById('compassValue').textContent = h + '°';
+    const dirs = ['N','NE','E','SE','S','SW','W','NW'];
+    document.getElementById('directionText').textContent = dirs[Math.round(h/45)%8];
+}
+
+// ===========================
+// 4. 탭 전환 (유지)
+// ===========================
+function switchTab(mode, btn) {
+    currentMode = mode;
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+    document.getElementById(mode + 'Screen').classList.add('active-screen');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    if(mode === 'angle') drawCompassTicks();
+}
+
+// ===========================
+// 5. 길이 측정 (유지)
+// ===========================
+function startMeasure(type) { measureRefType = type; document.getElementById('cameraInput').click(); }
+function handleImageUpload(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(evt) { const img = new Image(); img.onload = function() { setupCanvas(img); }; img.src = evt.target.result; }; reader.readAsDataURL(file); }
+function setupCanvas(img) {
+    const canvas = document.getElementById('measureCanvas'); const ctx = canvas.getContext('2d');
+    document.getElementById('measureMenu').style.display = 'none'; document.getElementById('stepBar').style.display = 'block';
+    canvas.style.display = 'block'; canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const hRatio = canvas.width / img.width; const vRatio = canvas.height / img.height; const ratio = Math.min(hRatio, vRatio);
+    const cx = (canvas.width - img.width*ratio) / 2; const cy = (canvas.height - img.height*ratio) / 2;
+    window.bgImage = { img, cx, cy, w: img.width*ratio, h: img.height*ratio };
+    redrawCanvas(); measureState = 1; refLine = null; targetLine = null; updateStepUI(); initTouchDraw(canvas);
+}
+function updateStepUI() {
+    const text = document.getElementById('stepText'); const btn = document.getElementById('stepActionBtn');
+    if (measureState === 1) { text.innerHTML = `<b>1단계</b>: <span style='color:#4CAF50'>${measureRefType === 'card' ? '신용카드 긴 면' : '500원 동전 지름'}</span>에 선을 맞추세요`; text.style.color = '#fff'; btn.textContent = "기준 등록"; btn.style.display = 'block'; } 
+    else if (measureState === 2) { text.innerHTML = `<b>2단계</b>: <span style='color:#e94560'>측정할 물체</span>에 선을 그으세요`; btn.style.display = 'none'; }
+}
+function redrawCanvas() {
+    const canvas = document.getElementById('measureCanvas'); const ctx = canvas.getContext('2d'); ctx.clearRect(0,0,canvas.width, canvas.height);
+    if(window.bgImage) { const {img, cx, cy, w, h} = window.bgImage; ctx.drawImage(img, 0, 0, img.width, img.height, cx, cy, w, h); }
+    if (refLine) drawLine(ctx, refLine.start, refLine.end, '#4CAF50', '1단계: 기준');
+    if (targetLine) drawLine(ctx, targetLine.start, targetLine.end, '#e94560', '2단계: 대상');
+}
+function drawLine(ctx, start, end, color, label) {
+    ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(end.x, end.y); ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.stroke();
+    ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(start.x, start.y, 5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(end.x, end.y, 5, 0, Math.PI*2); ctx.fill();
+    if(label) { ctx.fillStyle = color; ctx.font = "bold 14px sans-serif"; ctx.fillText(label, start.x, start.y - 10); }
+}
+function initTouchDraw(canvas) {
+    let startPos = null; let isDrawing = false;
+    canvas.ontouchstart = (e) => { if(measureState > 2) return; isDrawing = true; const t = e.touches[0]; startPos = { x: t.clientX, y: t.clientY }; };
+    canvas.ontouchmove = (e) => { if (!isDrawing) return; e.preventDefault(); const t = e.touches[0]; const currentPos = { x: t.clientX, y: t.clientY }; if (measureState === 1) refLine = { start: startPos, end: currentPos }; else if (measureState === 2) targetLine = { start: startPos, end: currentPos }; redrawCanvas(); };
+    canvas.ontouchend = (e) => { if (!isDrawing) return; isDrawing = false; if (measureState === 2) calculateFinalResult(); };
+}
+function confirmReference() {
+    if (!refLine) { alert("선을 그어주세요."); return; }
+    const distPx = Math.sqrt(Math.pow(refLine.end.x - refLine.start.x, 2) + Math.pow(refLine.end.y - refLine.start.y, 2));
+    if (distPx < 10) { alert("너무 짧습니다."); return; }
+    const realSize = measureRefType === 'card' ? REF_SIZE.card : REF_SIZE.coin;
+    pixelsPerMM = distPx / realSize; measureState = 2; updateStepUI();
+}
+function calculateFinalResult() {
+    if (!targetLine || !pixelsPerMM) return;
+    const distPx = Math.sqrt(Math.pow(targetLine.end.x - targetLine.start.x, 2) + Math.pow(targetLine.end.y - targetLine.start.y, 2));
+    const realMM = distPx / pixelsPerMM;
+    measureState = 3; document.getElementById('stepBar').style.display = 'none'; document.getElementById('finalResult').style.display = 'block'; document.getElementById('resultValue').textContent = realMM.toFixed(1) + ' mm';
+}
+function resetMeasure() {
+    document.getElementById('measureMenu').style.display = 'block'; document.getElementById('measureCanvas').style.display = 'none'; document.getElementById('stepBar').style.display = 'none'; document.getElementById('finalResult').style.display = 'none';
+    measureState = 0; refLine = null; targetLine = null;
+}
