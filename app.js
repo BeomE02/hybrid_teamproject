@@ -2,16 +2,23 @@
 // 전역 변수
 // ===========================
 let currentMode = 'level';
+
+// 보정값 (사용자가 0점을 잡은 위치)
 let calibration = { x: 0, y: 0 };
+
+// 센서 원본값 저장용 (보정 버튼 눌렀을 때 쓰기 위해)
+let rawSensor = { x: 0, y: 0 };
+
+// 측정 관련 변수
 let measureState = 0; 
 let measureRefType = 'card'; 
 let pixelsPerMM = 0; 
 let refLine = null; 
 let targetLine = null;
 
-// [수정] 수평계 경고 알림 상태 (기본값: 꺼짐)
+// 수평계 알림 설정
 let isTiltAlarmOn = false;
-let lastVibrateTime = 0; // 과도한 진동 방지용
+let lastVibrateTime = 0;
 
 const REF_SIZE = { card: 85.60, coin: 26.50 };
 
@@ -45,7 +52,7 @@ function startSensors() {
 }
 
 // ===========================
-// 2. 수평계 기능 (경고 진동 추가)
+// 2. 수평계 기능 (0점 보정 + 알림)
 // ===========================
 function toggleTiltAlarm() {
     isTiltAlarmOn = !isTiltAlarmOn;
@@ -53,7 +60,8 @@ function toggleTiltAlarm() {
     if (isTiltAlarmOn) {
         btn.textContent = "⚠️ 알림 켜짐";
         btn.classList.add('on');
-        alert("수평이 맞지 않으면 진동이 울립니다.");
+        // 켜졌다는 신호
+        if(navigator.vibrate) navigator.vibrate(50);
     } else {
         btn.textContent = "🔕 알림 꺼짐";
         btn.classList.remove('on');
@@ -62,15 +70,38 @@ function toggleTiltAlarm() {
 
 function handleMotion(event) {
     if (currentMode !== 'level') return;
+    
     let acc = event.accelerationIncludingGravity;
     if (!acc) return;
-    let x = acc.x, y = acc.y;
-    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) { x = -x; y = -y; }
-    x -= calibration.x; y -= calibration.y;
+
+    // 1. 원본 데이터 가져오기
+    let x = acc.x; 
+    let y = acc.y;
+
+    // 2. 기종별 방향 보정 (아이폰 등)
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) { 
+        x = -x; 
+        y = -y; 
+    }
+
+    // 3. [중요] 나중에 0점 잡으려고 원본 값 저장해두기
+    rawSensor.x = x;
+    rawSensor.y = y;
+
+    // 4. 보정값 적용 (현재값 - 기준값)
+    x -= calibration.x; 
+    y -= calibration.y;
+
+    // 5. 화면 표시 로직
     const limit = 100;
-    let moveX = x * 10; let moveY = y * -10;
+    let moveX = x * 10; 
+    let moveY = y * -10;
+    
     const dist = Math.sqrt(moveX*moveX + moveY*moveY);
-    if (dist > limit) { moveX = (moveX/dist)*limit; moveY = (moveY/dist)*limit; }
+    if (dist > limit) { 
+        moveX = (moveX/dist)*limit; 
+        moveY = (moveY/dist)*limit; 
+    }
     
     const bubble = document.getElementById('bubble');
     let isLevel = false;
@@ -87,22 +118,31 @@ function handleMotion(event) {
             isLevel = false;
         }
     }
+    
+    // 각도 표시
     document.getElementById('tiltAngle').textContent = Math.min(Math.sqrt(x*x+y*y)*5, 90).toFixed(1) + '°';
 
-    // [핵심 기능] 기울기 경고 진동 (버튼 켜짐 + 수평 아님)
+    // 경고 진동 (버튼 켜짐 + 수평 아님)
     if (isTiltAlarmOn && !isLevel) {
         const now = Date.now();
-        // 0.3초 간격으로 진동 (너무 잦은 호출 방지)
-        if (now - lastVibrateTime > 300) {
+        if (now - lastVibrateTime > 300) { // 0.3초 간격
             if(navigator.vibrate) navigator.vibrate(100);
             lastVibrateTime = now;
         }
     }
 }
-function calibrateLevel() { alert('0점 보정 완료'); }
+
+// [수정된 부분] 실제 0점 보정 함수
+function calibrateLevel() {
+    // 현재 센서의 원본 값을 기준점(calibration)으로 설정
+    calibration.x = rawSensor.x;
+    calibration.y = rawSensor.y;
+    
+    alert('현재 기울기를 0점으로 설정했습니다.');
+}
 
 // ===========================
-// 3. 나침반 기능 (진동 없음)
+// 3. 나침반 기능
 // ===========================
 function drawCompassTicks() {
     const dial = document.getElementById('compassDial');
@@ -153,7 +193,6 @@ function handleOrientation(event) {
     const dirs = ['N','NE','E','SE','S','SW','W','NW'];
     const dirText = dirs[Math.round(h/45)%8];
     document.getElementById('directionText').textContent = dirText;
-    // [확인] 나침반 진동 코드는 모두 제거되었습니다.
 }
 
 // ===========================
@@ -169,7 +208,7 @@ function switchTab(mode, btn) {
 }
 
 // ===========================
-// 5. 길이 측정 (유지)
+// 5. 길이 측정
 // ===========================
 function startMeasure(type) { measureRefType = type; document.getElementById('cameraInput').click(); }
 function handleImageUpload(e) { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(evt) { const img = new Image(); img.onload = function() { setupCanvas(img); }; img.src = evt.target.result; }; reader.readAsDataURL(file); }
