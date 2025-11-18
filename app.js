@@ -2,7 +2,7 @@
 // 전역 변수
 // ===========================
 let currentMode = 'level';
-let levelDisplayMode = 'surface'; // 'surface'(원형) or 'bar'(막대)
+let levelDisplayMode = 'surface'; // 'surface', 'bar_h', 'bar_v'
 
 let calibration = { x: 0, y: 0 };
 let rawSensor = { x: 0, y: 0 };
@@ -58,7 +58,7 @@ function playBeep() {
 }
 
 // ===========================
-// 2. 수평계 기능 (수동 모드 + 회전)
+// 2. 수평계 기능 (3가지 고정 모드)
 // ===========================
 function toggleTiltAlarm() {
     isTiltAlarmOn = !isTiltAlarmOn;
@@ -75,24 +75,39 @@ function toggleTiltAlarm() {
     }
 }
 
-// [신규] 모드 변경 함수
 function setLevelMode(mode) {
     levelDisplayMode = mode;
     
-    // 탭 스타일 변경
+    // 탭 UI 초기화
     document.getElementById('btnModeSurface').classList.remove('active');
-    document.getElementById('btnModeBar').classList.remove('active');
+    document.getElementById('btnModeBarH').classList.remove('active');
+    document.getElementById('btnModeBarV').classList.remove('active');
+    
+    const surfaceUI = document.getElementById('surfaceLevel');
+    const barUI = document.getElementById('barLevelContainer');
+    const barWrap = document.getElementById('barLevel');
     
     if (mode === 'surface') {
         document.getElementById('btnModeSurface').classList.add('active');
-        document.getElementById('surfaceLevel').classList.add('active');
-        document.getElementById('barLevelContainer').classList.remove('active');
-        document.getElementById('levelModeText').textContent = "평면 모드 (X/Y축)";
-    } else {
-        document.getElementById('btnModeBar').classList.add('active');
-        document.getElementById('surfaceLevel').classList.remove('active');
-        document.getElementById('barLevelContainer').classList.add('active');
-        document.getElementById('levelModeText').textContent = "막대형 모드";
+        surfaceUI.classList.add('active');
+        barUI.classList.remove('active');
+        document.getElementById('levelModeText').textContent = "평면 모드 (전체 수평)";
+    } 
+    else if (mode === 'bar_h') {
+        document.getElementById('btnModeBarH').classList.add('active');
+        surfaceUI.classList.remove('active');
+        barUI.classList.add('active');
+        // 가로 모드 고정 (회전 없음)
+        barWrap.classList.remove('vertical-mode');
+        document.getElementById('levelModeText').textContent = "가로 모드 (X축)";
+    } 
+    else if (mode === 'bar_v') {
+        document.getElementById('btnModeBarV').classList.add('active');
+        surfaceUI.classList.remove('active');
+        barUI.classList.add('active');
+        // 세로 모드 고정 (90도 회전)
+        barWrap.classList.add('vertical-mode');
+        document.getElementById('levelModeText').textContent = "세로 모드 (Y축)";
     }
 }
 
@@ -130,36 +145,26 @@ function handleMotion(event) {
         displayAngle = Math.sqrt(x*x+y*y)*5;
 
     } else {
-        // 2. 막대형 (수직/수평)
-        const barWrap = document.getElementById('barLevel');
+        // 2. 막대형 (가로/세로 고정)
         const barBubble = document.getElementById('barBubble');
-        
-        // X축(가로)과 Y축(세로) 중 더 기울어진 쪽을 기준으로 표시
         let tilt = 0;
-        let isVertical = false;
 
-        if (Math.abs(x) > Math.abs(y)) {
-            // X축 기울기가 더 큼 -> 가로 모드
-            tilt = x * 5; 
-            barWrap.classList.remove('vertical'); // 가로 배치
+        if (levelDisplayMode === 'bar_h') {
+            // 가로 모드: X축 사용
+            tilt = x * 5;
         } else {
-            // Y축 기울기가 더 큼 -> 세로 모드 (90도 회전)
-            tilt = y * 5; 
-            barWrap.classList.add('vertical'); // 세로 배치
-            isVertical = true;
+            // 세로 모드: Y축 사용 (방향 보정)
+            tilt = y * -5; 
         }
         
         // 물방울 이동
         let barMove = tilt * 5; 
         if (barMove > 120) barMove = 120;
         if (barMove < -120) barMove = -120;
-        
-        // 세로 모드일 때 방향 보정 (물방울 움직임 자연스럽게)
-        if (isVertical) barMove = -barMove;
 
         barBubble.style.left = `calc(50% + ${barMove}px)`;
 
-        // 수평 판정 (1도 이내)
+        // 수평 판정
         if (Math.abs(tilt) < 1.0) {
             barBubble.classList.add('green'); isLevel = true;
         } else {
