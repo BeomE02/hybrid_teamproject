@@ -427,12 +427,27 @@
             if(isPlaying) {
                 bgm.pause();
                 document.querySelector('.music-btn').classList.remove('playing');
-                musicIcon.innerText = "music_note";
+                // 아이콘을 음표로 복귀
+                if(musicIcon) musicIcon.innerText = "music_note"; 
             } else {
-                bgm.volume = 0.5;
-                bgm.play().catch(() => alert("화면을 터치해주세요."));
-                document.querySelector('.music-btn').classList.add('playing');
-                musicIcon.innerText = "pause";
+                bgm.volume = 0.5; // 볼륨 50%
+                
+                // 브라우저 재생 정책 대응
+                var playPromise = bgm.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(_ => {
+                        // 재생 성공
+                        document.querySelector('.music-btn').classList.add('playing');
+                        // 아이콘을 일시정지 모양으로 변경
+                        if(musicIcon) musicIcon.innerText = "pause";
+                    })
+                    .catch(error => {
+                        // 재생 차단되었을 경우 (사용자 터치 필요)
+                        console.log(error);
+                        alert("음악 재생을 위해 우측 상단 버튼을 다시 한 번 눌러주세요! 🎄");
+                    });
+                }
             }
             isPlaying = !isPlaying;
         }
