@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2025 부산 크리스마스 빌리지</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Gowun+Batang:wght@400;700&family=Pretendard:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <style>
+        /* --- [Design System: Clean Christmas] --- */
+        :root {
+            --bg-body: #121212;
+            --bg-card: #ffffff;
+            --primary-red: #b91c1c; /* 차분한 딥 레드 */
+            --primary-gold: #d4af37; /* 클래식 골드 */
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --shadow-soft: 0 4px 20px rgba(0,0,0,0.06);
+            --shadow-float: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-body);
+            font-family: 'Pretendard', sans-serif;
+            display: flex; justify-content: center;
+            min-height: 100vh; color: var(--text-main);
+        }
+
+        .mobile-container {
+            width: 100%; max-width: 480px;
+            background-color: #f9fafb;
+            position: relative;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            overflow-x: hidden;
+            padding-bottom: 100px; /* Footer Space */
+        }
+
+        /* --- [Utilities] --- */
+        .fade-up { opacity: 0; transform: translateY(20px); transition: all 0.8s ease; }
+        .fade-up.active { opacity: 1; transform: translateY(0); }
+        .font-serif { font-family: 'Gowun Batang', serif; }
+        .font-eng { font-family: 'Cinzel', serif; }
+        .text-gold { color: var(--primary-gold); }
+        .text-red { color: var(--primary-red); }
+
+        /* --- [Snow Effect] --- */
+        #snow-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
+
+        /* --- [Music Button] --- */
+        .music-btn {
+            position: fixed; top: 20px; right: 20px; z-index: 10000;
+            width: 44px; height: 44px;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%; color: white;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.3s;
+        }
+        .music-btn.playing { border-color: var(--primary-gold); background: rgba(0,0,0,0.7); }
+        .music-btn .material-icons { font-size: 20px; }
+
+        /* --- [Hero Section] --- */
+        .hero-section {
+            height: 90vh; position: relative;
+            display: flex; flex-direction: column; justify-content: flex-end;
+            overflow: hidden;
+        }
+        /* 메인 배경 이미지 */
+        .hero-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            /* 크리스마스 마켓 야경 (배경 빈 현상 수정) */
+            background-image: url('https://images.unsplash.com/photo-1512389142860-9c449e58a543?q=80&w=1000&auto=format&fit=crop'); 
+            background-size: cover; background-position: center;
+            filter: brightness(0.6);
+            z-index: 1;
+        }
+        .hero-content {
+            position: relative; z-index: 2;
+            padding: 40px 24px 60px; text-align: center; color: white;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+        }
+        .hero-badge {
+            display: inline-block; padding: 6px 14px;
+            border: 1px solid rgba(255,255,255,0.4); border-radius: 30px;
+            font-size: 0.8rem; margin-bottom: 20px; letter-spacing: 2px;
+            background: rgba(255,255,255,0.1); backdrop-filter: blur(5px);
+        }
+        .main-title {
+            font-size: 2.6rem; line-height: 1.2; margin-bottom: 15px;
+            font-weight: 700; text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .sub-title { font-size: 1rem; opacity: 0.85; font-weight: 300; }
+
+        /* --- [Intro Card] --- */
+        .section-wrap { padding: 0 24px; margin-top: -30px; position: relative; z-index: 3; }
+        .intro-card {
+            background: white; border-radius: 20px; padding: 40px 25px;
+            text-align: center; box-shadow: var(--shadow-float);
+        }
+        .intro-text { line-height: 2.2; color: #444; font-size: 1rem; margin-top: 15px; }
+        .divider { width: 40px; height: 3px; background: var(--primary-gold); margin: 20px auto; border-radius: 2px; }
+
+        /* --- [Countdown] --- */
+        .timer-box {
+            margin: 30px 0; background: #222; color: white;
+            border-radius: 16px; padding: 30px 20px; text-align: center;
+            box-shadow: var(--shadow-float);
+        }
+        .timer-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .time-el .num { font-size: 1.6rem; font-weight: 700; color: var(--primary-gold); font-family: 'Cinzel'; }
+        .time-el .label { font-size: 0.7rem; color: #888; margin-top: 5px; }
+
+        /* --- [Highlight Cards] --- */
+        .section-header { text-align: center; margin: 50px 0 25px; }
+        .sec-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; color: #111; letter-spacing: 1px; }
+        .sec-desc { font-size: 0.9rem; color: #666; }
+
+        .clean-card {
+            background: white; border-radius: 16px; overflow: hidden;
+            margin-bottom: 20px; box-shadow: var(--shadow-soft);
+            transition: transform 0.2s;
+        }
+        .clean-card:active { transform: scale(0.98); }
+        .card-img { height: 180px; background-size: cover; background-position: center; position: relative; }
+        .card-body { padding: 25px; }
+        .card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 8px; }
+        .card-p { font-size: 0.95rem; color: #555; line-height: 1.5; }
+        .tag {
+            position: absolute; top: 15px; left: 15px;
+            background: white; padding: 5px 12px; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 700; color: var(--primary-red);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        /* --- [App Guide] --- */
+        .app-box {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            border-radius: 16px; padding: 30px 25px;
+            border: 1px solid #ddd; margin-bottom: 40px;
+        }
+        .check-list { margin-top: 20px; font-size: 0.95rem; }
+        .check-item { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; color: #333; }
+        .check-item .material-icons { color: #10b981; font-size: 1.2rem; }
+
+        /* --- [Map Section] --- */
+        .map-frame {
+            height: 240px; border-radius: 16px; overflow: hidden; position: relative;
+            background-color: #eee; box-shadow: var(--shadow-soft);
+        }
+        /* 지도 배경: 부산 영화의전당 느낌 */
+        .map-bg {
+            width: 100%; height: 100%;
+            background-image: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQkwwLyywxFUvcuys6ufG2G9W_wVyp6RZarEg&s');
+            background-size: cover; background-position: center;
+            filter: brightness(0.7);
+        }
+        .map-btn {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; color: #111; padding: 12px 24px;
+            border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 0.9rem;
+            display: flex; align-items: center; gap: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        .map-btn:active { transform: translate(-50%, -50%) scale(0.95); }
+
+        /* --- [Info Grid] --- */
+        .info-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px;
+        }
+        .info-box {
+            background: white; padding: 20px; border-radius: 12px;
+            text-align: center; border: 1px solid #eee;
+        }
+        .info-label { font-size: 0.75rem; color: #888; margin-bottom: 5px; font-weight: 700; }
+        .info-val { font-size: 0.95rem; font-weight: 600; color: #111; }
+
+        /* --- [Clean Footer Button] --- */
+        .sticky-footer {
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            padding: 20px; background: rgba(255,255,255,0.8);
+            backdrop-filter: blur(15px); border-top: 1px solid rgba(0,0,0,0.05);
+            display: flex; justify-content: center; z-index: 1000;
+        }
+        .footer-content { width: 100%; max-width: 440px; display: flex; gap: 10px; }
+        
+        .btn-home {
+            width: 50px; height: 54px; background: white; border: 1px solid #ddd;
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            color: #333; text-decoration: none; flex-shrink: 0;
+        }
+        
+        .btn-share {
+            flex-grow: 1; height: 54px;
+            background-color: var(--primary-red); /* 깔끔한 단색 */
+            color: white; border: none; border-radius: 12px;
+            font-size: 1rem; font-weight: 600;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(185, 28, 28, 0.3);
+            transition: background 0.3s;
+        }
+        .btn-share:hover { background-color: #991b1b; }
+        .btn-share:active { transform: scale(0.98); }
+
+        /* --- [Footer Info] --- */
+        .footer-text {
+            text-align: center; padding: 40px 20px 0; color: #999;
+            font-size: 0.75rem; line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="mobile-container">
+        
+        <canvas id="snow-canvas"></canvas>
+
+        <div class="music-btn" onclick="toggleMusic()">
+            <span class="material-icons" id="music-icon">music_note</span>
+        </div>
+        <audio id="bgm" loop>
+            <source src="https://stream.zeno.fm/0r0j868901zuv" type="audio/mp3">
+        </audio>
+
+        <div class="hero-section">
+            <div class="hero-bg"></div> <div class="hero-content">
+                <span class="hero-badge font-eng">BUSAN 2025</span>
+                <h1 class="main-title font-serif">산타마을<br>남쪽 임시지점</h1>
+                <p class="sub-title">영화의전당 빅루프 아래 펼쳐지는<br>노르딕 크리스마스 빌리지</p>
+            </div>
+        </div>
+
+        <div class="section-wrap">
+            <div class="intro-card fade-up">
+                <h3 class="font-serif" style="font-size:1.3rem; color:#111;">"부산으로 온 산타마을"</h3>
+                <div class="divider"></div>
+                <p class="intro-text font-serif">
+                    차가운 겨울 바람 끝에 설렘이 묻어나는 곳.<br>
+                    쏟아지는 오로라 조명과 100여 개의 마켓,<br>
+                    그리고 <b>강레오 셰프</b>의 특별한 미식까지.<br><br>
+                    2025년 겨울, 가장 낭만적인 부산으로<br>
+                    여러분을 초대합니다.
+                </p>
+            </div>
+
+            <div class="timer-box fade-up">
+                <div style="font-family:'Cinzel'; color:var(--primary-gold); font-size:0.9rem; margin-bottom:10px;">GRAND OPENING</div>
+                <div class="timer-grid" id="timer">
+                    <div class="time-el"><div class="num" id="d">00</div><div class="label">DAYS</div></div>
+                    <div class="time-el"><div class="num" id="h">00</div><div class="label">HOURS</div></div>
+                    <div class="time-el"><div class="num" id="m">00</div><div class="label">MINS</div></div>
+                    <div class="time-el"><div class="num" id="s">00</div><div class="label">SECS</div></div>
+                </div>
+                <div style="font-size:0.8rem; opacity:0.6; margin-top:15px;">2025.11.27 (목) 17:00 점등식</div>
+            </div>
+        </div>
+
+        <div class="section-wrap">
+            <div class="section-header fade-up">
+                <h2 class="sec-title font-eng">HIGHLIGHTS</h2>
+                <p class="sec-desc">올해 역대급 규모로 달라진 포인트</p>
+            </div>
+
+            <div class="clean-card fade-up">
+                <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1543589077-47d81606c1bf?q=80&w=800');">
+                    <span class="tag">VIEW</span>
+                </div>
+                <div class="card-body">
+                    <h3 class="card-title">빅루프 오로라 미디어아트</h3>
+                    <p class="card-p">영화의전당 지붕 전체를 수놓는 환상적인 오로라 쇼. 해가 지면 산타마을의 진짜 모습이 드러납니다.</p>
+                </div>
+            </div>
+
+            <div class="clean-card fade-up">
+                <div class="card-img" style="background-image: url('https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=800');">
+                    <span class="tag">FOOD</span>
+                </div>
+                <div class="card-body">
+                    <h3 class="card-title">강레오 셰프 & 70팀의 마켓</h3>
+                    <p class="card-p">스타 셰프 강레오의 큐레이션! 부산 로컬 맛집부터 글로벌 크리스마스 메뉴까지 미식의 향연.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-wrap">
+            <div class="section-header fade-up">
+                <h2 class="sec-title font-eng">INFORMATION</h2>
+            </div>
+
+            <div class="app-box fade-up">
+                <h3 style="font-size:1.1rem; display:flex; align-items:center; gap:8px;">
+                    <span class="material-icons text-red">bolt</span> 웨이팅 없는 입장 꿀팁
+                </h3>
+                <div class="check-list">
+                    <div class="check-item"><span class="material-icons">check_circle</span> <b>'푸블페이' 앱</b> 설치 및 가입</div>
+                    <div class="check-item"><span class="material-icons">check_circle</span> 11월 17일부터 사전 예약자 배송</div>
+                    <div class="check-item"><span class="material-icons">check_circle</span> 현장에서도 앱으로 간편 결제</div>
+                </div>
+            </div>
+
+            <div class="map-frame fade-up">
+                <div class="map-bg"></div>
+                <a href="https://map.naver.com/p/search/%EC%98%81%ED%99%94%EC%9D%98%EC%A0%84%EB%8B%B9" target="_blank" class="map-btn">
+                    <span class="material-icons text-red">map</span> 지도 보기 (부산)
+                </a>
+            </div>
+
+            <div class="info-grid fade-up">
+                <div class="info-box">
+                    <div class="info-label">DATE</div>
+                    <div class="info-val">2025.11.27 - 12.25</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">TIME</div>
+                    <div class="info-val">11:00 ~ 22:00</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">PLACE</div>
+                    <div class="info-val">영화의전당 야외광장</div>
+                </div>
+                <div class="info-box">
+                    <div class="info-label">COST</div>
+                    <div class="info-val">입장료 무료</div>
+                </div>
+            </div>
+
+            <div class="footer-text">
+                주최: 마켓창고 | 장소: 부산 영화의전당<br>
+                본 페이지는 2025 부산 크리스마스 빌리지<br>
+                홍보를 위해 제작된 모바일 초대장입니다.
+            </div>
+        </div>
+
+    </div> <div class="sticky-footer">
+        <div class="footer-content">
+            <a href="https://www.marketchango.com" target="_blank" class="btn-home">
+                <span class="material-icons">home</span>
+            </a>
+            <button class="btn-share" onclick="copyLink()">
+                <span class="material-icons">ios_share</span> 초대장 공유하기
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 1. Scroll Animation
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if(entry.isIntersecting) entry.target.classList.add('active');
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+        // 2. Countdown
+        const targetDate = new Date("November 27, 2025 17:00:00").getTime();
+        function updateTimer() {
+            const now = new Date().getTime();
+            const diff = targetDate - now;
+
+            if (diff < 0) {
+                // Event Started -> Target Christmas
+                const xmasDate = new Date("December 25, 2025 00:00:00").getTime();
+                const diffXmas = xmasDate - now;
+                if(diffXmas < 0) {
+                    document.getElementById("timer").innerHTML = "<div style='grid-column:span 4; font-size:1.2rem; color:#d4af37;'>MERRY CHRISTMAS!</div>";
+                    return;
+                }
+                calcTime(diffXmas);
+            } else {
+                calcTime(diff);
+            }
+        }
+        function calcTime(d) {
+            const days = Math.floor(d / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((d % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const mins = Math.floor((d % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((d % (1000 * 60)) / 1000);
+            
+            document.getElementById("d").innerText = String(days).padStart(2,"0");
+            document.getElementById("h").innerText = String(hours).padStart(2,"0");
+            document.getElementById("m").innerText = String(mins).padStart(2,"0");
+            document.getElementById("s").innerText = String(secs).padStart(2,"0");
+        }
+        setInterval(updateTimer, 1000);
+        updateTimer();
+
+        // 3. Snow Effect (Simple & Clean)
+        const canvas = document.getElementById('snow-canvas');
+        const ctx = canvas.getContext('2d');
+        let w = window.innerWidth, h = window.innerHeight;
+        canvas.width = w; canvas.height = h;
+        
+        const flakes = Array.from({length: 50}, () => ({
+            x: Math.random() * w, y: Math.random() * h,
+            r: Math.random() * 2 + 1, d: Math.random() * 1 + 0.5
+        }));
+
+        function drawSnow() {
+            ctx.clearRect(0, 0, w, h);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+            ctx.beginPath();
+            flakes.forEach(f => {
+                ctx.moveTo(f.x, f.y);
+                ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+                f.y += f.d;
+                if(f.y > h) f.y = 0;
+            });
+            ctx.fill();
+            requestAnimationFrame(drawSnow);
+        }
+        drawSnow();
+        window.onresize = () => { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; };
+
+        // 4. Music & Share
+        const bgm = document.getElementById('bgm');
+        const musicIcon = document.getElementById('music-icon');
+        let isPlaying = false;
+
+        function toggleMusic() {
+            if(isPlaying) {
+                bgm.pause();
+                document.querySelector('.music-btn').classList.remove('playing');
+                musicIcon.innerText = "music_note";
+            } else {
+                bgm.volume = 0.5;
+                bgm.play().catch(() => alert("화면을 터치해주세요."));
+                document.querySelector('.music-btn').classList.add('playing');
+                musicIcon.innerText = "pause";
+            }
+            isPlaying = !isPlaying;
+        }
+
+        function copyLink() {
+            const dummy = document.createElement('input');
+            document.body.appendChild(dummy);
+            dummy.value = window.location.href;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+            alert("초대장 링크가 복사되었습니다! 🎄");
+        }
+    </script>
+</body>
+</html>
